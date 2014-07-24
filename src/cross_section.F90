@@ -180,9 +180,8 @@ contains
     case (GRID_CASCADE)
       ! If we're using the fractional cascading energy grid, to find the index
       ! on the nuclide energy grid we just look up the index for that nuclide
- 
-      i_grid = cascading_grid_index(i_nuclide)
 
+      i_grid = cascading_grid_index(i_nuclide)
     end select
 
     ! check for rare case where two energy points are the same
@@ -520,8 +519,8 @@ contains
           j = nuc % n_aug_grid
           cascading_grid_index(i) = nuc % n_grid - 1
         else
-          j = binary_search(nuc % aug_energy, nuc % n_aug_grid, E)
-          cascading_grid_index(i) = nuc % nuc_index(j) 
+          j = binary_search(nuc % aug_energy, nuc % n_aug_grid, E) + 1
+          cascading_grid_index(i) = nuc % nuc_index(j) - 1 
         end if
 
         ! update j to be the approximate index of the particle's energy in the
@@ -538,12 +537,14 @@ contains
 
         ! j is the approximate index of the particle's energy; find it's true
         ! index by making one comparison to the energy at next index
-        elseif (j + 1 < nuc % n_aug_grid .and. E > nuc % aug_energy(j + 1)) then
-          j = j + 1
-          cascading_grid_index(i) = nuc % nuc_index(j)
+!        elseif (j + 1 < nuc % n_aug_grid .and. E > nuc % aug_energy(j + 1)) then
+!          j = j + 1
+          elseif (j - 1 > 0 .and. E < nuc % aug_energy(j - 1)) then
+          j = j - 1
+          cascading_grid_index(i) = nuc % nuc_index(j) - 1
           j = nuc % aug_index(j)
         else
-          cascading_grid_index(i) = nuc % nuc_index(j)
+          cascading_grid_index(i) = nuc % nuc_index(j) - 1
           j = nuc % aug_index(j)
         end if
       end if

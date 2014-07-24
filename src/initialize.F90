@@ -113,7 +113,9 @@ contains
 
       ! Contruct fractional cascading energy grid
       if (grid_method == GRID_CASCADE) then
+        call time_unionize % start()
         call cascading_grid()
+        call time_unionize % stop()
       end if
 
       ! Allocate and setup tally stride, matching_bins, and tally maps
