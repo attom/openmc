@@ -556,7 +556,7 @@ class StatePoint(object):
                 dims = np.asarray(dims)
                 if score_str == 'current':
                     dims += 1
-                meshmax[1:4] = dims
+                meshmax[1:3] = dims
                 mesh_bins = np.zeros((n_bins,3))
                 mesh_bins[:,2] = np.floor(((filters[:,n_filters - i - 1] - 1) %
                             np.prod(meshmax[0:2]))/(np.prod(meshmax[0:1]))) + 1

@@ -215,6 +215,8 @@ contains
     case ('lethargy')
       message = "Lethargy mapped energy grid not yet supported."
       call fatal_error()
+    case('cascade')
+      grid_method = GRID_CASCADE
     case default
       message = "Unknown energy grid method: " // trim(temp_str)
       call fatal_error()

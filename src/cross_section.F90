@@ -14,6 +14,7 @@ module cross_section
   save
 
   integer :: union_grid_index
+  integer, allocatable :: cascading_grid_index(:)
 !$omp threadprivate(union_grid_index)
 
 contains
@@ -51,6 +52,12 @@ contains
 
     ! Find energy index on unionized grid
     if (grid_method == GRID_UNION) call find_energy_index(p % E)
+
+    ! Find energy indices for all nuclides on cascading grid
+    if (grid_method == GRID_CASCADE) then
+      if (.not. allocated(cascading_grid_index)) allocate(cascading_grid_index(n_nuclides_total))
+      call find_cascade_energy_index(p % E)
+    end if
 
     ! Determine if this material has S(a,b) tables
     check_sab = (mat % n_sab > 0)
@@ -169,6 +176,12 @@ contains
       else
         i_grid = binary_search(nuc % energy, nuc % n_grid, E)
       end if
+
+    case (GRID_CASCADE)
+      ! If we're using the fractional cascading energy grid, to find the index
+      ! on the nuclide energy grid we just look up the index for that nuclide
+ 
+      i_grid = cascading_grid_index(i_nuclide)
 
     end select
 
@@ -477,5 +490,65 @@ contains
     end if
 
   end subroutine find_energy_index
+
+!=============================================================================== 
+! FIND_CASCADE_ENERGY_INDEX determines the indices on the augmented nuclide
+! energy grids for all nuclides in the model at a certain energy
+!=============================================================================== 
+
+  subroutine find_cascade_energy_index(E)
+
+    real(8), intent(in) :: E ! energy of particle
+
+    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
+    integer :: i ! loop index over nuclides
+    integer :: j ! approximate index in augmented grid
+
+    do i = 1, n_nuclides_total
+      nuc => nuclides(i)
+
+      ! If we are on the first nuclide, do a binary search of the augmented
+      ! nuclide energy grid for the particle energy
+      if (i == 1) then
+
+        ! If the particle's energy is outside of the augmented grid, set to first
+        ! or last index. Otherwise do a binary search
+        if (E < nuc % aug_energy(1)) then
+          j = 1
+          cascading_grid_index(i) = 1
+        elseif (E > nuc % aug_energy(nuc % n_aug_grid)) then
+          j = nuc % n_aug_grid
+          cascading_grid_index(i) = nuc % n_grid - 1
+        else
+          j = binary_search(nuc % aug_energy, nuc % n_aug_grid, E)
+          cascading_grid_index(i) = nuc % nuc_index(j) 
+        end if
+
+        ! update j to be the approximate index of the particle's energy in the
+        ! next nuclide
+        j = nuc % aug_index(j)
+
+      ! If we are not on the first nuclide follow the pointer to the energy's
+      ! index in the next augmented grid
+      else
+
+        ! If the energy is outside the grid, set index to last
+        if (j > nuc % n_aug_grid) then
+          cascading_grid_index(i) = nuc % n_grid - 1
+
+        ! j is the approximate index of the particle's energy; find it's true
+        ! index by making one comparison to the energy at next index
+        elseif (j + 1 < nuc % n_aug_grid .and. E > nuc % aug_energy(j + 1)) then
+          j = j + 1
+          cascading_grid_index(i) = nuc % nuc_index(j)
+          j = nuc % aug_index(j)
+        else
+          cascading_grid_index(i) = nuc % nuc_index(j)
+          j = nuc % aug_index(j)
+        end if
+      end if
+    end do
+
+  end subroutine find_cascade_energy_index
 
 end module cross_section
