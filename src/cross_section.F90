@@ -16,6 +16,7 @@ module cross_section
   integer :: union_grid_index
   integer, allocatable :: cascading_grid_index(:)
 !$omp threadprivate(union_grid_index)
+!$omp threadprivate(cascading_grid_index)
 
 contains
 
@@ -499,9 +500,10 @@ contains
 
     real(8), intent(in) :: E ! energy of particle
 
-    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
+    type(Nuclide), pointer, save :: nuc => null() ! pointer to nuclide
     integer :: i ! loop index over nuclides
     integer :: j ! approximate index in augmented grid
+!$omp threadprivate(nuc)
 
     do i = 1, n_nuclides_total
       nuc => nuclides(i)
@@ -537,8 +539,6 @@ contains
 
         ! j is the approximate index of the particle's energy; find it's true
         ! index by making one comparison to the energy at next index
-!        elseif (j + 1 < nuc % n_aug_grid .and. E > nuc % aug_energy(j + 1)) then
-!          j = j + 1
           elseif (j - 1 > 0 .and. E < nuc % aug_energy(j - 1)) then
           j = j - 1
           cascading_grid_index(i) = nuc % nuc_index(j) - 1

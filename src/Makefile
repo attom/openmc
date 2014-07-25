@@ -10,11 +10,11 @@ xml_lib = -Lxml/lib -lxml
 #===============================================================================
 
 COMPILER = gnu
-DEBUG    = yes
+DEBUG    = no
 PROFILE  = no
 OPTIMIZE = no
 MPI      = no
-OPENMP   = no
+OPENMP   = yes
 HDF5     = no
 PETSC    = no
 
