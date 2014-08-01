@@ -174,19 +174,19 @@ contains
       if (i == n_nuclides_total) then
         nuc % n_aug_grid = nuc % n_grid
         allocate(nuc % aug_energy(nuc % n_aug_grid))
-        allocate(nuc % nuc_index(nuc % n_aug_grid))
-        allocate(nuc % aug_index(nuc % n_aug_grid))
+        allocate(nuc % aug_pointers(2, nuc % n_aug_grid))
         nuc % aug_energy = nuc % energy
-        nuc % nuc_index = (/(j, j = 1, nuc % n_aug_grid)/)
-        nuc % aug_index = 1
+
+        ! fill the array with pointer pairs
+        nuc % aug_pointers(1, :) = (/(j, j = 1, nuc % n_aug_grid)/)
+        nuc % aug_pointers(2, :) = 1
 
       ! Create the augmented nuclide energy grid and pointer arrays
       else
         nuc_next => nuclides(i + 1)
         nuc % n_aug_grid = nuc % n_grid + nuc_next % n_aug_grid / 2
         allocate(nuc % aug_energy(nuc % n_aug_grid))
-        allocate(nuc % nuc_index(nuc % n_aug_grid))
-        allocate(nuc % aug_index(nuc % n_aug_grid))
+        allocate(nuc % aug_pointers(2, nuc % n_aug_grid))
 
         ! Set indices to the beginning of the nuclide energy arrays
         j = 1
@@ -203,8 +203,8 @@ contains
             do while (j <= nuc % n_aug_grid)
               nuc % aug_energy(j) = nuc_next % aug_energy(i_aug)
               ! Set nuclide grid pointer out of bounds since energy is beyond it
-              nuc % nuc_index(j) = i_nuc
-              nuc % aug_index(j) = i_aug
+              nuc % aug_pointers(1, j) = i_nuc
+              nuc % aug_pointers(2, j) = i_aug
               i_aug = i_aug + 2
               j = j + 1
             end do
@@ -216,9 +216,9 @@ contains
           if (i_aug > nuc_next % n_aug_grid) then
             do while (j <= nuc % n_aug_grid)
               nuc % aug_energy(j) = nuc % energy(i_nuc)
-              nuc % nuc_index(j) = i_nuc
               ! Set next augmented grid pointer to out of bounds
-              nuc % aug_index(j) = i_aug
+              nuc % aug_pointers(1, j) = i_nuc
+              nuc % aug_pointers(2, j) = i_aug
               i_nuc = i_nuc + 1
               j = j + 1
             end do
@@ -229,8 +229,8 @@ contains
           E_aug = nuc_next % aug_energy(i_aug)
 
           ! Set the nuclide grid and next augmented grid pointers
-          nuc % nuc_index(j) = i_nuc
-          nuc % aug_index(j) = i_aug
+          nuc % aug_pointers(1, j) = i_nuc
+          nuc % aug_pointers(2, j) = i_aug
 
           ! Add the smaller of the nuclide and next augmented grid energies
           ! and advance that index
