@@ -64,6 +64,23 @@ module ace_header
   end type Reaction
 
 !===============================================================================
+! RRRDATA contains cluster information for the resolved resonance range.
+!===============================================================================
+
+  type RrrData
+    real(8) :: low_energy   ! lower energy of the RRR
+    real(8) :: high_energy  ! high energy of the RRR
+    integer :: n_energy     ! # of incident neutron energies
+    integer :: n_clust      ! # of clusters
+    integer, allocatable :: codebook ! mapping of energies to clusters
+
+    ! Type-Bound procedures
+    contains
+      procedure :: clear => rrrdata_clear ! Deallocates RrrData
+  end type RrrData
+
+
+!===============================================================================
 ! URRDATA contains probability tables for the unresolved resonance range.
 !===============================================================================
 
@@ -128,6 +145,10 @@ module ace_header
     real(8), allocatable :: nu_d_data(:)
     real(8), allocatable :: nu_d_precursor_data(:)
     type(DistEnergy), pointer :: nu_d_edist(:) => null()
+
+    ! Clustering data for the resolved resonance region
+    logical                :: rrr_cluster = .false.
+    type(RrrData), pointer :: rrr_data => null()
 
     ! Unresolved resonance data
     logical                :: urr_present
@@ -315,7 +336,20 @@ module ace_header
     end subroutine reaction_clear
 
 !===============================================================================
-! URRDATA_CLEAR resets and deallocates data in Reaction.
+! RRRDATA_CLEAR resets and deallocates data in the resolved resonance reigon.
+!===============================================================================
+
+    subroutine rrrdata_clear(this)
+
+      class(RrrData), intent(inout) :: this ! The RrrData object to clear
+
+      if (allocated(this % codebook)) deallocate(this % codebook)
+
+    end subroutine rrrdata_clear
+
+
+!===============================================================================
+! URRDATA_CLEAR resets and deallocates data in the unresolved resonance region.
 !===============================================================================
 
     subroutine urrdata_clear(this)

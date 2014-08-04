@@ -123,6 +123,9 @@ contains
   subroutine grid_pointers()
 
     integer :: i            ! loop index for nuclides
+    ! Actually, j is the loop index for the union energy grid
+    ! and index_e is the index of the nuclide energy grid
+    ! n_grid is the number of points of the unionized energy grid
     integer :: j            ! loop index for nuclide energy grid
     integer :: index_e      ! index on union energy grid
     real(8) :: union_energy ! energy on union grid

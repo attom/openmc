@@ -11,6 +11,7 @@ module ace
   use output,           only: write_message
   use set_header,       only: SetChar
   use string,           only: to_str
+  use clustering,       only: cluster_one_nuclide
 
   implicit none
 
@@ -78,6 +79,9 @@ contains
           ! Read the ACE table into the appropriate entry on the nuclides
           ! array
           call read_ace_table(i_nuclide, i_listing)
+
+          ! Perform clustering on the cross sections of one nuclide, if desired
+          call cluster_one_nuclide(i_nuclide)
 
           ! Add name and alias to dictionary
           call already_read % add(name)
