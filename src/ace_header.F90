@@ -72,8 +72,11 @@ module ace_header
     real(8) :: e_high   ! high energy of the RRR
     integer :: i_low    ! index of e_low in nuclide energy grid
     integer :: i_high   ! index of e_high in nuclide energy grid
+    integer :: i_offset_energy ! offset in energy array for fast energies
+    integer :: i_offset_xs ! offset in cross section arrays for ...
     real(8) :: L2_err   ! L^2 clustering error
     real(8) :: Linf_err ! L^infty clustering error
+    integer :: n_clust  ! number of clusters used
     integer, allocatable :: codebook(:) ! mapping of energies to clusters
 
     ! Type-Bound procedures

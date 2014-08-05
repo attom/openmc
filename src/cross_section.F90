@@ -142,6 +142,7 @@ contains
     real(8), intent(in) :: E         ! energy
 
     integer :: i_grid ! index on nuclide energy grid
+    integer :: i_offset ! clustering offset into nuclide energy grid
     real(8) :: f      ! interp factor on nuclide energy grid
     type(Nuclide), pointer, save :: nuc => null()
 !$omp threadprivate(nuc)
@@ -175,8 +176,20 @@ contains
     ! check for rare case where two energy points are the same
     if (nuc % energy(i_grid) == nuc % energy(i_grid+1)) i_grid = i_grid + 1
 
-    ! calculate interpolation factor
-    f = (E - nuc%energy(i_grid))/(nuc%energy(i_grid+1) - nuc%energy(i_grid))
+    ! calculate interpolation factor (zero if in clustered range)
+    if (nuc % rrr_cluster .and. .false.) then
+      if (E < nuc % rrr_data % e_low) then
+        f = (E - nuc%energy(i_grid))/(nuc%energy(i_grid+1) - nuc%energy(i_grid))
+      else if (E > nuc % rrr_data % e_high) then
+        i_offset = nuc % rrr_data % i_offset_energy
+        f = (E - nuc%energy(i_grid + i_offset)) / &
+          (nuc%energy(i_grid + i_offset + 1) - nuc%energy(i_grid+i_offset))
+      else
+        f = ZERO
+      end if
+    else
+      f = (E - nuc%energy(i_grid))/(nuc%energy(i_grid+1) - nuc%energy(i_grid))
+    end if
 
     micro_xs(i_nuclide) % index_grid    = i_grid
     micro_xs(i_nuclide) % interp_factor = f

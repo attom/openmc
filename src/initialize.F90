@@ -335,9 +335,9 @@ contains
         case ('-c','-cluster', '--cluster')
           clustering_on = .true.
           i = i + 1
-          n_clust_glob = str_to_int(argv(i))
+          n_clust_glob = int(str_to_int(argv(i)))
           i = i + 1
-          n_group_glob = str_to_int(argv(i))
+          n_group_glob = int(str_to_int(argv(i)))
 
         case ('-p', '-plot', '--plot')
           run_mode = MODE_PLOTTING

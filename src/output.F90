@@ -1496,6 +1496,7 @@ contains
     ! display time elapsed for various sections
     write(ou,100) "Total time for initialization", time_initialize % elapsed
     write(ou,100) "  Reading cross sections", time_read_xs % elapsed
+    write(ou,100) "  Clustering cross sections", time_cluster % elapsed
     write(ou,100) "  Unionizing energy grid", time_unionize % elapsed
     write(ou,100) "Total time in simulation", time_inactive % elapsed + &
          time_active % elapsed

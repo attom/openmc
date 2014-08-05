@@ -83,7 +83,7 @@ module global
   real(8), allocatable :: e_grid(:) ! energies on unionized grid
 
   ! Clustering control data for resolved resonance range
-  logical :: clustering_on = .false.
+  logical :: clustering_on = .true.
   integer :: n_clust_glob = 5 ! number of clusters to use in each energy range
   integer :: n_group_glob = 1 ! number of energy ranges to use in the RRR
   integer :: clust_max_it = 100
@@ -230,6 +230,7 @@ module global
   type(Timer) :: time_total         ! timer for total run
   type(Timer) :: time_initialize    ! timer for initialization
   type(Timer) :: time_read_xs       ! timer for reading cross sections
+  type(Timer) :: time_cluster       ! timer for clustering RRR
   type(Timer) :: time_unionize      ! timer for unionizing energy grid
   type(Timer) :: time_bank          ! timer for fission bank synchronization
   type(Timer) :: time_bank_sample   ! timer for fission bank sampling

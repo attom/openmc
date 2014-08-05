@@ -81,7 +81,9 @@ contains
           call read_ace_table(i_nuclide, i_listing)
 
           ! Perform clustering on the cross sections of one nuclide, if desired
+          call time_cluster % start()
           call cluster_one_nuclide(i_nuclide)
+          call time_cluster % stop()
 
           ! Add name and alias to dictionary
           call already_read % add(name)

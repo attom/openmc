@@ -44,7 +44,6 @@ contains
     err_flag = .false.
     finished = .false.
     do while (.not. finished)
-      ! TODO Add in Linf error to compute_distances
       call kms_compute_distances(observations, clust_cen, codebook, L2_err, &
         Linf_err)
       it = it + 1
@@ -52,7 +51,7 @@ contains
       old_L2_err = L2_err
       !call print_kms(observations, clust_cen, codebook, L2_err, &
       !  it, change, tol)
-      write (*,*) it, change, L2_err, Linf_err
+      !write (*,*) it, change, L2_err, Linf_err
       call kms_update_clust_cen(observations, codebook, clust_cen, err_flag)
       if (it >= max_it .or. change <= tol .or. err_flag) then
         finished = .true.
@@ -78,7 +77,7 @@ contains
     integer :: n_dim                                      ! number of dimensions
     integer :: n_feat                                     ! number of features
     integer :: n_clust                                    ! number of clusters
-    integer :: i_dim, i_feat, i_clust
+    integer :: i_feat, i_clust
     integer :: closest_clust
     real(8) :: L2_dist, min_L2_dist, Linf_dist
 
@@ -125,7 +124,7 @@ contains
     integer :: n_dim                                      ! number of dimensions
     integer :: n_feat                                     ! number of features
     integer :: n_clust                                    ! number of clusters
-    integer :: i_dim, i_feat, i_clust
+    integer :: i_feat, i_clust
 
     ! Sizes
     n_dim = size(observations, 1)
@@ -173,7 +172,6 @@ contains
     n_feat = size(observations, 2)
 
     ! Uniformly sample observations for the initial points
-    write(*,*) n_feat, n_clust
     stride = n_feat / n_clust
     if (mod(n_feat, n_clust) /= 0) then
       stride = stride + 1
