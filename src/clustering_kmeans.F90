@@ -16,7 +16,7 @@ contains
 !===============================================================================
 
   subroutine perform_kms(observations, max_it, tol, clust_cen, &
-    codebook, distortion, err_flag)
+    codebook, L2_err, Linf_err, err_flag)
 
     ! All 2-D arrays are indexed with (dimension index, feature index)
     real(8), allocatable, intent(in) :: observations(:,:) ! data to be clustered
@@ -24,10 +24,11 @@ contains
     real(8), intent(in) :: tol                            ! stopping criterion
     real(8), allocatable, intent(inout) :: clust_cen(:,:) ! init cluster locs
     integer, allocatable, intent(out) :: codebook(:)      ! cluster membership
-    real(8), intent(out) :: distortion                    ! clustering error
+    real(8), intent(out) :: L2_err                        ! clustering L^2 error
+    real(8), intent(out) :: Linf_err                  ! clustering L^infty error
     logical, intent(out) :: err_flag                      ! true if error occurs
-    real(8) :: old_distortion                             ! old clustering error
-    real(8) :: change                                     ! change in distortion
+    real(8) :: old_L2_err, old_Linf_err                 ! old clustering errors
+    real(8) :: change                                     ! change in error
     integer :: it                                         ! current iteration
     logical :: finished                                   ! clusters converged
     integer :: n_feat
@@ -37,17 +38,21 @@ contains
     allocate(codebook(n_feat))
 
     ! Iterate the k-means algorithm until convergence is achieved
-    old_distortion = ZERO
+    old_L2_err = ZERO
+    old_Linf_err = ZERO
     it = 0
     err_flag = .false.
     finished = .false.
     do while (.not. finished)
-      call kms_compute_distances(observations, clust_cen, codebook, distortion)
+      ! TODO Add in Linf error to compute_distances
+      call kms_compute_distances(observations, clust_cen, codebook, L2_err, &
+        Linf_err)
       it = it + 1
-      change = abs(distortion - old_distortion) / (distortion + TINY_BIT)
-      old_distortion = distortion
-      call print_kms(observations, clust_cen, codebook, distortion, &
-        it, change, tol)
+      change = abs(L2_err - old_L2_err) / (L2_err + TINY_BIT)
+      old_L2_err = L2_err
+      !call print_kms(observations, clust_cen, codebook, L2_err, &
+      !  it, change, tol)
+      write (*,*) it, change, L2_err, Linf_err
       call kms_update_clust_cen(observations, codebook, clust_cen, err_flag)
       if (it >= max_it .or. change <= tol .or. err_flag) then
         finished = .true.
@@ -62,41 +67,45 @@ contains
 !===============================================================================
 
   subroutine kms_compute_distances(observations, clust_cen, codebook, &
-    distortion)
+    L2_err, Linf_err)
 
     ! All 2-D arrays are indexed with (dimension index, feature index)
     real(8), allocatable, intent(in) :: observations(:,:) ! data to be clustered
     real(8), allocatable, intent(in) :: clust_cen(:,:)    ! cluster locs
     integer, allocatable, intent(inout) :: codebook(:)    ! cluster membership
-    real(8), intent(out) :: distortion                    ! dist data to clust
+    real(8), intent(out) :: L2_err                        ! dist data to clust
+    real(8), intent(out) :: Linf_err                      ! another error metric
     integer :: n_dim                                      ! number of dimensions
     integer :: n_feat                                     ! number of features
     integer :: n_clust                                    ! number of clusters
     integer :: i_dim, i_feat, i_clust
     integer :: closest_clust
-    real(8) :: dist, min_dist
+    real(8) :: L2_dist, min_L2_dist, Linf_dist
 
     ! Sizes
     n_dim = size(observations, 1)
     n_feat = size(observations, 2)
     n_clust = size(clust_cen, 2)
 
-    ! Compute distances from each point to each cluster. Update distortion and
+    ! Compute distances from each point to each cluster. Update errors and
     ! codebook.
-    distortion = ZERO
+    L2_err = ZERO
+    LInf_err = ZERO
     do i_feat = 1, n_feat
-      min_dist = INFINITY
+      min_L2_dist = INFINITY
       do i_clust = 1, n_clust
-        dist = sum((observations(:, i_feat) - clust_cen(:, i_clust))**2)
-        if (dist < min_dist) then
-          min_dist = dist
+        L2_dist = sum((observations(:, i_feat) - clust_cen(:, i_clust))**2)
+        if (L2_dist < min_L2_dist) then
+          min_L2_dist = L2_dist
           closest_clust = i_clust
+          Linf_dist = maxval(abs(observations(:,i_feat) - clust_cen(:, i_clust)))
         end if
       end do
-      distortion = distortion + min_dist
+      L2_err = L2_err + min_L2_dist
+      Linf_err = max(Linf_err, Linf_dist)
       codebook(i_feat) = closest_clust
     end do
-    distortion = sqrt(distortion)
+    L2_err = sqrt(L2_err / (n_feat * n_dim))
 
   end subroutine kms_compute_distances
 
@@ -164,6 +173,7 @@ contains
     n_feat = size(observations, 2)
 
     ! Uniformly sample observations for the initial points
+    write(*,*) n_feat, n_clust
     stride = n_feat / n_clust
     if (mod(n_feat, n_clust) /= 0) then
       stride = stride + 1

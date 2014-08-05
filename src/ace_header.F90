@@ -68,11 +68,13 @@ module ace_header
 !===============================================================================
 
   type RrrData
-    real(8) :: low_energy   ! lower energy of the RRR
-    real(8) :: high_energy  ! high energy of the RRR
-    integer :: n_energy     ! # of incident neutron energies
-    integer :: n_clust      ! # of clusters
-    integer, allocatable :: codebook ! mapping of energies to clusters
+    real(8) :: e_low    ! lower energy of the RRR
+    real(8) :: e_high   ! high energy of the RRR
+    integer :: i_low    ! index of e_low in nuclide energy grid
+    integer :: i_high   ! index of e_high in nuclide energy grid
+    real(8) :: L2_err   ! L^2 clustering error
+    real(8) :: Linf_err ! L^infty clustering error
+    integer, allocatable :: codebook(:) ! mapping of energies to clusters
 
     ! Type-Bound procedures
     contains

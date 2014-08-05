@@ -84,8 +84,10 @@ module global
 
   ! Clustering control data for resolved resonance range
   logical :: clustering_on = .false.
-  integer :: n_clust_glob ! number of clusters to use in each energy range
-  integer :: n_group_glob ! number of energy ranges to use in the RRR
+  integer :: n_clust_glob = 5 ! number of clusters to use in each energy range
+  integer :: n_group_glob = 1 ! number of energy ranges to use in the RRR
+  integer :: clust_max_it = 100
+  real(8) :: clust_tol = 1E-4_8
 
   ! Unresolved resonance probablity tables
   logical :: urr_ptables_on = .true.
