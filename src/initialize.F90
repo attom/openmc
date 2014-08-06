@@ -103,6 +103,8 @@ contains
       call time_read_xs % start()
       call read_xs()
       call time_read_xs % stop()
+      message = 'Program in mixed state. It is unwise to continue.'
+      call fatal_error() ! delete
 
       ! Construct unionized energy grid from cross-sections
       if (grid_method == GRID_UNION) then

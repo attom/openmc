@@ -177,7 +177,7 @@ contains
     if (nuc % energy(i_grid) == nuc % energy(i_grid+1)) i_grid = i_grid + 1
 
     ! calculate interpolation factor (zero if in clustered range)
-    if (nuc % rrr_cluster .and. .false.) then
+    if (nuc % rrr_cluster) then
       if (E < nuc % rrr_data % e_low) then
         f = (E - nuc%energy(i_grid))/(nuc%energy(i_grid+1) - nuc%energy(i_grid))
       else if (E > nuc % rrr_data % e_high) then

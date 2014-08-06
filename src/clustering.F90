@@ -22,7 +22,6 @@ contains
     integer, intent(in) :: i_nuclide       ! index of nuclide to be clustered
     real(8), allocatable :: observations(:,:) ! cross sections to be clustered
     real(8), allocatable :: clust_cen(:,:) ! centroids of clusters
-    real(8), allocatable :: xs_scratch(:)  ! scratch space for one cross section
     integer :: n_rrr                       ! size of RRR grid before clustering
     integer :: n_rxn                       ! number of reactions to cluster
     logical err_flag ! false if clustering was successful
@@ -31,9 +30,7 @@ contains
     type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
     type(Reaction), pointer :: rxn => null() ! pointer to nuclide's rxn data
     integer :: i,j
-    integer :: i_offset ! offset for energy index
     integer :: threshold ! threshold index for reactions
-    integer :: n_xs ! new xs size
 
     nuc => nuclides(i_nuclide)
     ! Do not cluster light elements for now
@@ -118,15 +115,8 @@ contains
     write (*,*) "Error is", rrr % L2_err, "/", rrr % Linf_err
 
     ! Overwrite pointwise cross section data with clustered data
-    ! Do in all reactions and in main XS arrays.
-    n_xs = rrr % n_clust + (rrr % i_low - 1) + &
-      (nuc % n_grid - rrr % i_high)
+    call apply_clustering_to_all_xs(i_nuclide)
     !nuc % n_grid = n_xs
-    allocate(xs_scratch(n_xs))
-    !
-    write(*,*) 'old size', nuc % n_grid, 'new size', n_xs, &
-      'clusters', rrr % n_clust
-
 
     !do i = 1, nuc % n_reaction
     !  write (*,*) 'MT', nuc % reactions(i) % MT, &
@@ -141,7 +131,80 @@ contains
     ! Energy grid fast offset
     write (*,*) '----------------------------------'
 
-  end subroutine
+  end subroutine cluster_one_nuclide
+
+
+!===============================================================================
+! APPLY_CLUSTERING_TO_ALL_XS uses the codebook to cluster all the cross sections
+! for one nuclide
+!===============================================================================
+
+  subroutine apply_clustering_to_all_xs(i_nuclide)
+
+    integer, intent(in) :: i_nuclide       ! index of nuclide to be clustered
+    real(8), allocatable :: xs_scratch(:)  ! scratch space for one cross section
+    real(8), allocatable :: xs_norm(:)     ! denominator for weighted average
+    real(8) :: wgt ! weight for the weighted cross section averaging
+    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
+    type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
+    real(8), pointer :: xs(:) => null() ! pointer to the current cross section
+    integer :: n_rrr   ! size of RRR grid before clustering
+    integer :: n_therm ! size of xs below the RRR
+    integer :: n_fast  ! size of xs above RRR (includes URR and fast)
+    integer :: n_clust ! size of RRR after clustering
+    integer :: n_xs_old, n_xs_new ! xs sizes
+    integer :: offset_rrr, offset_fast_old, offset_fast_new ! xs array offsets
+    !type(Reaction), pointer :: rxn => null() ! pointer to nuclide's rxn data
+    !integer :: i_offset ! offset for energy index
+    !integer :: threshold ! threshold index for reactions
+    integer :: i, strt, endd, i_clust
+
+    ! Determine sizes and do allocations
+    nuc => nuclides(i_nuclide)
+    rrr => nuc % rrr_data
+    n_therm = rrr % i_low - 1
+    n_fast = nuc % n_grid - rrr % i_high
+    n_clust = rrr % n_clust
+    n_rrr = rrr % i_high - rrr % i_low + 1
+    offset_rrr = n_therm
+    offset_fast_old = offset_rrr + n_rrr
+    offset_fast_new = offset_rrr + n_clust
+    n_xs_old = nuc % n_grid
+    n_xs_new = n_therm + n_clust + n_fast
+    allocate(xs_scratch(n_xs_new))
+    allocate(xs_norm(n_clust))
+
+    ! Apply clusteirng for total, elastic, etc. reactions for the nuclide
+    xs => nuc % total
+    xs_scratch(1:n_therm) = xs(1:n_therm)
+    do i = 1, n_rrr
+      i_clust = rrr % codebook(i)
+      ! Can use uniform or 1/E weighting
+      wgt = 1
+      !wgt = 1 / nuc % energy(i+offset_rrr)
+      xs_norm(i_clust) = xs_norm(i_clust) + wgt
+      xs_scratch(i_clust + offset_rrr) = xs_scratch(i_clust + offset_rrr) + &
+        xs(i_clust + offset_rrr) * wgt
+    end do
+    strt = offset_rrr + 1
+    endd = offset_rrr + n_clust
+    xs_scratch(strt:endd) = xs_scratch(strt:endd) / xs_norm
+    xs_scratch(offset_fast_new:n_xs_new) = xs(offset_fast_old:n_xs_old)
+
+    deallocate(nuc % total)
+    ! Could use a move_alloc here to avoid another copy
+    allocate(nuc % total(n_xs_new))
+    nuc % total = xs_scratch
+
+    do i = offset_rrr+1, offset_rrr + n_clust
+      write(*,*) nuc % total(i)
+    end do
+
+    write(*,*) 'old size', n_xs_old, 'new size', n_xs_new, &
+      'clusters', rrr % n_clust
+
+  end subroutine apply_clustering_to_all_xs
+
 
 !===============================================================================
 ! FIND_GRID_INDEX determines the index of a sorted grid closest to an input
