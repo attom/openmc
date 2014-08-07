@@ -46,6 +46,8 @@ contains
     ! Set pointers to unionized energy grid for each nuclide
     call grid_pointers()
 
+    write (*,*) "Size of unionized grid is", n_grid ! delete
+
   end subroutine unionized_grid
 
 !===============================================================================

@@ -29,8 +29,10 @@ contains
     type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
     type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
     type(Reaction), pointer :: rxn => null() ! pointer to nuclide's rxn data
-    integer :: i,j
-    integer :: threshold ! threshold index for reactions
+    integer :: threshold ! integer where the reaction begins in the energy grid
+    integer :: i
+    integer j ! delete
+    j = 0 ! delete
 
     nuc => nuclides(i_nuclide)
     ! Do not cluster light elements for now
@@ -114,11 +116,18 @@ contains
     !end do
     write (*,*) "Error is", rrr % L2_err, "/", rrr % Linf_err
 
-    call write_clustering(i_nuclide, observations, clust_cen)
+    ! Write to output files the observations and clusterings
+    !call write_clustering(i_nuclide, observations, clust_cen)
+
+    !do i = 1, nuc % n_reaction
+    !  write (*,*) 'MT', nuc % reactions(i) % MT, &
+    !  'with size', size(nuc % reactions(i) % sigma), &
+    !  'and threshold', nuc % reactions(i) % threshold, &
+    !  '/', nuc % n_grid
+    !end do
 
     ! Overwrite pointwise cross section data with clustered data
     call apply_clustering_to_all_xs(i_nuclide)
-    !nuc % n_grid = n_xs
 
     !do i = 1, nuc % n_reaction
     !  write (*,*) 'MT', nuc % reactions(i) % MT, &
@@ -135,30 +144,6 @@ contains
 
   end subroutine cluster_one_nuclide
 
-  subroutine write_clustering(i_nuclide, observations, clust_cen)
-
-    integer, intent(in) :: i_nuclide       ! index of nuclide to be clustered
-    real(8), allocatable :: observations(:,:) ! cross sections to be clustered
-    real(8), allocatable :: clust_cen(:,:) ! centroids of clusters
-    real(8) :: SMALL = 1E-11_8 ! a small value so log calls are robust
-    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
-
-    nuc => nuclides(i_nuclide)
-    open(11, file='obs_' // trim(adjustl(nuc % name)) // '.txt')
-    open(12, file='cen_' // trim(adjustl(nuc % name)) // '.txt')
-    if (nuc % fissionable) then
-      write(11, '(3e12.4)') 10**observations - SMALL
-      write(12, '(3e12.4)') 10**clust_cen - SMALL
-    else
-      write(11, '(2f12.3)') 10**observations - SMALL
-      write(12, '(2f12.3)') 10**clust_cen - SMALL
-    end if
-    close(11)
-    close(12)
-
-  end subroutine write_clustering
-
-
 !===============================================================================
 ! APPLY_CLUSTERING_TO_ALL_XS uses the codebook to cluster all the cross sections
 ! for one nuclide
@@ -173,8 +158,10 @@ contains
     integer :: n_clust ! size of RRR after clustering
     type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
     type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
-    !integer :: threshold ! threshold index for reactions
+    type(Reaction), pointer :: rxn => null() ! pointer to nuclide reaction data
     integer :: n_xs_old, n_xs_new  ! delete
+    integer i ! delete
+    i = 0 ! delete
 
     ! Determine sizes and set pointers
     nuc => nuclides(i_nuclide)
@@ -189,9 +176,52 @@ contains
     write(*,*) 'old size', n_xs_old, 'new size', n_xs_new, &
       'clusters', rrr % n_clust
 
-    ! Apply clusteirng for total, elastic, etc. reactions for the nuclide
+    ! Re-order clusters for cache-friendliness.
+    call reorder_clusters(rrr % codebook, n_therm, n_rrr, n_clust)
+
+    ! Do the identity mapping for verification (delete)
+    !n_clust = n_rrr
+    !do i = 1, size(rrr % codebook)
+    !  rrr%codebook(i) = i
+    !end do
+
+    ! Apply clusteirng for total, elastic, etc. xs arrays for the nuclide
     call condense_one_xs(nuc % total, rrr % codebook, n_therm, n_fast, &
       n_clust, n_rrr)
+    call condense_one_xs(nuc % elastic, rrr % codebook, n_therm, n_fast, &
+      n_clust, n_rrr)
+    call condense_one_xs(nuc % absorption, rrr % codebook, n_therm, n_fast, &
+      n_clust, n_rrr)
+    call condense_one_xs(nuc % heating, rrr % codebook, n_therm, n_fast, &
+      n_clust, n_rrr)
+    call condense_one_xs(nuc % fission, rrr % codebook, n_therm, n_fast, &
+      n_clust, n_rrr)
+    call condense_one_xs(nuc % nu_fission, rrr % codebook, n_therm, n_fast, &
+      n_clust, n_rrr)
+
+    ! Apply clustering to each reaction's sigma array. The sizes will be
+    ! reaction-dependent because only cross sections after the threshold are
+    ! stored.
+    do i = 1, nuc % n_reaction
+      rxn => nuc % reactions(i)
+      if (rxn % threshold < rrr % i_low) then
+        n_therm = rrr % i_low - rxn % threshold
+        n_rrr = rrr % i_high - rrr % i_low + 1
+        n_fast = nuc % n_grid - rrr % i_high
+        call condense_one_xs(rxn % sigma, rrr % codebook, n_therm, n_fast, &
+          n_clust, n_rrr)
+      else if (rxn % MT < N_GAMMA .and. &
+          rxn % threshold <= rrr % i_high .and. &
+          rxn % threshold >= rrr % i_low) then
+        write (*,*) rxn % MT, rxn % threshold, rrr % i_low, rrr % i_high
+        message = "Assumed no thresholds in the RRR for clustering. Aborting."
+        call fatal_error()
+      end if
+    end do
+
+    ! Thin the nuclide energy grid. Update codebook and thresholds for thinned
+    ! array.
+    call thin_energy_grid(i_nuclide)
 
   end subroutine apply_clustering_to_all_xs
 
@@ -216,7 +246,9 @@ contains
     integer :: n_xs_old, n_xs_new  ! xs sizes
     integer :: offset_rrr, offset_fast_old, offset_fast_new ! xs array offsets
     integer :: i, strt, endd, i_clust ! indices for arrays and loops
-    real(8) :: SMALL = 1E-11_8 ! a small value so log calls are robust
+
+    ! If cross section is not allocated, skip
+    if (.not. allocated(xs)) return
 
     ! Determine offsets and do allocations
     offset_rrr = n_therm
@@ -229,21 +261,23 @@ contains
     xs_scratch = 0
     xs_norm = 0
 
-    ! Copy thermal
-    xs_scratch(1:n_therm) = xs(1:n_therm)
+    ! Copy thermal portion, which may not exist for thresholded reactions
+    if (n_therm > 0) xs_scratch(1:n_therm) = xs(1:n_therm)
 
     ! Cluster RRR
+    ! We do a weighted *linear* averaging to preserve (sum of partials) equals
+    ! total in each cluster
     wgt = 1
     do i = 1, n_rrr
       i_clust = codebook(i)
       xs_norm(i_clust) = xs_norm(i_clust) + wgt
       xs_scratch(i_clust + offset_rrr) = xs_scratch(i_clust + offset_rrr) + &
-        log(xs(i + offset_rrr)+SMALL) * wgt
+        xs(i + offset_rrr) * wgt
     end do
     strt = offset_rrr + 1
     endd = offset_rrr + n_clust
     xs_norm = max(xs_norm, 1)
-    xs_scratch(strt:endd) = exp(xs_scratch(strt:endd) / xs_norm)
+    xs_scratch(strt:endd) = xs_scratch(strt:endd) / xs_norm
 
     ! Copy URR and fast
     xs_scratch(offset_fast_new:n_xs_new) = xs(offset_fast_old:n_xs_old)
@@ -258,6 +292,200 @@ contains
     !end do
 
   end subroutine condense_one_xs
+
+!===============================================================================
+! THIN_ENERGY_GRID thins the energy grid to remove gridpoints that share
+! the same codebook value
+!===============================================================================
+  subroutine thin_energy_grid(i_nuclide)
+
+    integer, intent(in) :: i_nuclide ! index of nuclide to be clustered
+    integer :: n_rrr   ! size of RRR grid before clustering
+    integer :: n_therm ! size of xs below the RRR
+    integer :: n_fast  ! size of xs above RRR (includes URR and fast)
+    integer :: n_grid_old, n_grid_new ! sizes of nuclide's energy grid
+    real(8), allocatable :: e_scratch(:)  ! scratch space for energy grid
+    integer, allocatable :: c_scratch(:) ! scratch for thinned grid codebook
+    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
+    type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
+    type(Reaction), pointer :: rxn => null() ! pointer to nuclide reaction data
+    integer :: i_cur ! current location in e_scratch / c_scratch
+    integer :: i_clust, i_clust_old ! indices for cluster
+    integer :: offset_rrr, offset_fast ! xs array offsets
+    integer :: i, strt, endd ! indices for arrays and loops
+
+    ! Determine sizes and set pointers and offsets
+    nuc => nuclides(i_nuclide)
+    rrr => nuc % rrr_data
+    n_therm = rrr % i_low - 1
+    n_fast = nuc % n_grid - rrr % i_high
+    n_rrr = rrr % i_high - rrr % i_low + 1
+    offset_rrr = n_therm
+    offset_fast = n_therm + n_rrr
+    n_grid_old = size(nuc % energy)
+
+    ! We do not upfront know how much thinning will take place,
+    ! but the thinned array will be at most the size of energy.
+    allocate(e_scratch(n_grid_old))
+    e_scratch = ZERO
+
+    ! Similarly, the thinned codebook will be at most the size of the old
+    ! codebook.
+    allocate(c_scratch(n_rrr))
+    c_scratch = 0
+
+    ! Copy thermal portion of energy range
+    e_scratch(1:n_therm) = nuc % energy(1:n_therm)
+
+    ! Thin the RRR portion of the energy range. Only need to keep energy
+    ! gridpoints where the cluster number changes.
+    i_clust_old = 0
+    i_cur = 0
+    do i = 1, n_rrr
+      i_clust = rrr % codebook(i)
+      if (i_clust /= i_clust_old) then
+        i_clust_old = i_clust
+        i_cur = i_cur + 1
+        e_scratch(offset_rrr + i_cur) = nuc % energy(offset_rrr + i)
+        c_scratch(i_cur) = i_clust
+      end if
+    end do
+
+    ! Copy fast portion of the energy range
+    strt = offset_rrr + i_cur + 1
+    endd = offset_rrr + i_cur + n_fast
+    e_scratch(strt:endd) =  nuc % energy(offset_fast+1 : offset_fast+n_fast)
+
+    ! Determine new length for energy grid
+    n_grid_new = n_therm + i_cur + n_fast
+
+    ! write energy files for debug purposes (delete)
+    open(13, file='energy_' // trim(adjustl(nuc % name)) // '_old.txt')
+    write(13, '(1e20.12)') nuc % energy
+    close(13)
+    !
+    open(14, file='energy_' // trim(adjustl(nuc % name)) // '_new.txt')
+    write(14, '(1e20.12)') e_scratch(1:n_grid_new)
+    close(14)
+
+    ! Update threshold indices.
+    ! This is is a lot of cache jumping.
+    do i = 1, nuc % n_reaction
+      rxn => nuc % reactions(i)
+      if (rxn % threshold > rrr % i_high) then
+        rxn % threshold = rxn % threshold + i_cur - n_rrr
+      end if
+    end do
+
+    ! Move e_scratch to energy, trimming off unused values
+    n_grid_new = n_therm + i_cur + n_fast
+    deallocate(nuc % energy)
+    allocate(nuc % energy(n_grid_new))
+    nuc % energy(1:n_grid_new) = e_scratch(1:n_grid_new)
+    nuc % n_grid = n_grid_new
+
+    ! Move c_scratch to codebook, trimming off unused values
+    deallocate(rrr % codebook)
+    allocate(rrr % codebook(i_cur))
+    rrr % codebook(1:i_cur) = c_scratch(1:i_cur)
+
+  end subroutine thin_energy_grid
+
+!===============================================================================
+! REORDER_CLUSTERS reorders the clusters so cluster 1 appears first in the
+! energy domain, then cluster 2, etc. Takes advantage of the fact that indexing
+! of codebook is the same order as indexing of the energy domain.
+!===============================================================================
+
+  subroutine reorder_clusters(codebook, n_therm, n_rrr, n_clust)
+
+    integer, allocatable, intent(inout) :: codebook(:) ! how to do the condensation
+    integer, intent(in) :: n_therm ! size of xs below the RRR
+    integer, intent(in) :: n_rrr   ! size of RRR grid before clustering
+    integer, intent(in) :: n_clust ! number of clusters
+    integer, allocatable :: c_map(:) ! mapping from old to new cluster numbers
+    logical, allocatable :: c_done(:) ! whether each cluster has been found
+    integer :: offset_rrr ! offset to RRR in energy
+    integer :: i ! energy index
+    integer :: i_clust ! old cluster index
+    integer :: i_cur ! new cluster index
+
+    ! Determine offsets and allocate arrays
+    offset_rrr = n_therm
+    allocate(c_map(n_clust))
+    c_map = 0
+    allocate(c_done(n_clust))
+    c_done = .false.
+
+    !write (*,*) 'c_map'
+    !write (*,'(30i3)') c_map
+
+    ! Loop through to find first useage 
+    i_cur = 0
+    do i = 1, n_rrr
+      i_clust = codebook(i)
+      if (.not. c_done(i_clust)) then
+        c_done(i_clust) = .true.
+        i_cur = i_cur + 1
+        c_map(i_clust) = i_cur
+        if (i_cur == n_clust) exit
+      end if
+    end do
+
+    !write (*,*) 'c_map'
+    !write (*,'(30i3)') c_map
+
+    ! Deal with empty cluster possibility
+    if (i_cur /= n_clust) then
+      do i_clust = 1, n_clust
+        if (.not. c_done(i_clust)) then
+          c_done(i_clust) = .true.
+          i_cur = i_cur + 1
+          c_map(i_clust) = i_cur
+          if (i_cur == n_clust) exit
+        end if
+      end do
+    end if
+
+    !write (*,*) 'codebook'
+    !write (*,'(30i3)') codebook(1:min(size(codebook),400))
+
+    ! Map old cluster numbers to new cluster numbers
+    codebook(1:n_rrr) = c_map(codebook(1:n_rrr))
+
+    !write (*,*) 'c_map'
+    !write (*,'(30i3)') c_map
+    !write (*,*) 'codebook'
+    !write (*,'(30i3)') codebook(1:min(size(codebook),400))
+
+  end subroutine reorder_clusters
+
+!===============================================================================
+! WRITE_CLUSTERING writes the observation and cluster centers to file
+!===============================================================================
+
+  subroutine write_clustering(i_nuclide, observations, clust_cen)
+
+    integer, intent(in) :: i_nuclide       ! index of nuclide to be clustered
+    real(8), allocatable :: observations(:,:) ! cross sections to be clustered
+    real(8), allocatable :: clust_cen(:,:) ! centroids of clusters
+    real(8) :: SMALL = 1E-11_8 ! a small value so log calls are robust
+    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
+
+    nuc => nuclides(i_nuclide)
+    open(11, file='obs_' // trim(adjustl(nuc % name)) // '.txt')
+    open(12, file='cen_' // trim(adjustl(nuc % name)) // '.txt')
+    if (nuc % fissionable) then
+      write(11, '(3e12.4)') 10**observations - SMALL
+      write(12, '(3e12.4)') 10**clust_cen - SMALL
+    else
+      write(11, '(2f12.3)') 10**observations - SMALL
+      write(12, '(2f12.3)') 10**clust_cen - SMALL
+    end if
+    close(11)
+    close(12)
+
+  end subroutine write_clustering
 
 !===============================================================================
 ! FIND_GRID_INDEX determines the index of a sorted grid closest to an input

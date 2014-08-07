@@ -1,7 +1,7 @@
 module clustering_kmeans
 
   use constants
-  use error,           only: fatal_error
+  use error,           only: fatal_error, warning
   use global
   use random_lcg,      only: prn         ! random numbers
   use string,          only: to_str
@@ -142,12 +142,16 @@ contains
       clust_count(i_clust) = clust_count(i_clust) + 1
     end do
     do i_clust = 1, n_clust
-      clust_cen(:, i_clust) = clust_cen(:, i_clust) / clust_count(i_clust)
       ! If a cluster ends up being unused, set an error
       if (clust_count(i_clust) == 0) then
-        err_flag = .true.
-        exit
+        clust_count(i_clust) = 1
+        clust_cen(:, i_clust) = 0
+        message = "Resetting unused cluster."
+        call warning()
+        !err_flag = .true.
+        !exit
       end if
+      clust_cen(:, i_clust) = clust_cen(:, i_clust) / clust_count(i_clust)
     end do
 
   end subroutine kms_update_clust_cen
