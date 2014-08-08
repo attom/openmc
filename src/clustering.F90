@@ -204,10 +204,11 @@ contains
     ! stored.
     do i = 1, nuc % n_reaction
       rxn => nuc % reactions(i)
-      if (rxn % threshold < rrr % i_low) then
+      if (allocated(rxn % sigma) .and. rxn % threshold < rrr % i_low) then
         n_therm = rrr % i_low - rxn % threshold
         n_rrr = rrr % i_high - rrr % i_low + 1
         n_fast = nuc % n_grid - rrr % i_high
+        write (*,*) rxn % MT
         call condense_one_xs(rxn % sigma, rrr % codebook, n_therm, n_fast, &
           n_clust, n_rrr)
       else if (rxn % MT < N_GAMMA .and. &
@@ -376,6 +377,9 @@ contains
         rxn % threshold = rxn % threshold + i_cur - n_rrr
       end if
     end do
+
+    ! Update i_high index
+    rrr % i_high = rrr % i_high + i_cur - n_rrr
 
     ! Move e_scratch to energy, trimming off unused values
     n_grid_new = n_therm + i_cur + n_fast

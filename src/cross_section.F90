@@ -142,6 +142,7 @@ contains
     real(8), intent(in) :: E         ! energy
 
     integer :: i_grid ! index on nuclide energy grid
+    integer :: i_grid_L, i_grid_R ! left and right index on nuclide energy grid
     integer :: i_offset ! clustering offset into nuclide energy grid
     real(8) :: f      ! interp factor on nuclide energy grid
     type(Nuclide), pointer, save :: nuc => null()
@@ -156,7 +157,8 @@ contains
       ! If we're using the unionized grid with pointers, finding the index on
       ! the nuclide energy grid is as simple as looking up the pointer
 
-      i_grid = nuc % grid_index(union_grid_index)
+      i_grid_L = nuc % grid_index(union_grid_index)
+      i_grid_R = nuc % grid_index(union_grid_index+1) ! TODO overflow?
 
     case (GRID_NUCLIDE)
       ! If we're not using the unionized grid, we have to do a binary search on
@@ -164,31 +166,37 @@ contains
       ! interpolate between
 
       if (E < nuc % energy(1)) then
-        i_grid = 1
+        i_grid_L = 1
       elseif (E > nuc % energy(nuc % n_grid)) then
-        i_grid = nuc % n_grid - 1
+        i_grid_L = nuc % n_grid - 1
       else
-        i_grid = binary_search(nuc % energy, nuc % n_grid, E)
+        i_grid_L = binary_search(nuc % energy, nuc % n_grid, E)
+      ! TODO (offsets + codebook lookup a la energy_grid if clustering)
       end if
+
+      i_grid_R = i_grid_L + 1 ! TODO: change for clustering case
 
     end select
 
     ! check for rare case where two energy points are the same
-    if (nuc % energy(i_grid) == nuc % energy(i_grid+1)) i_grid = i_grid + 1
+    if (nuc % energy(i_grid_L) == nuc % energy(i_grid_R)) then
+      i_grid_L = i_grid_L + 1
+      i_grid_R = i_grid_R + 1
+    end if
 
-    ! calculate interpolation factor (zero if in clustered range)
+    ! calculate interpolation factor
+    f = (E - nuc%energy(i_grid_L))/(nuc%energy(i_grid_R) - nuc%energy(i_grid_L))
+
+    ! Do not interpolate clustered data because the rest of the code uses i_grid
+    ! and i_grid+1, not i_grid_L and i_grid_R. Use closest gridpoint instead.
     if (nuc % rrr_cluster) then
-      if (E < nuc % rrr_data % e_low) then
-        f = (E - nuc%energy(i_grid))/(nuc%energy(i_grid+1) - nuc%energy(i_grid))
-      else if (E > nuc % rrr_data % e_high) then
-        i_offset = nuc % rrr_data % i_offset_energy
-        f = (E - nuc%energy(i_grid + i_offset)) / &
-          (nuc%energy(i_grid + i_offset + 1) - nuc%energy(i_grid+i_offset))
-      else
+      if (E >= nuc % rrr_data % e_low .and. E <= nuc % rrr_data % e_high) then
+        if (f < 0.5) then
+          i_grid = i_grid_L
+        else
+          i_grid = i_grid_R
+        end if
         f = ZERO
-      end if
-    else
-      f = (E - nuc%energy(i_grid))/(nuc%energy(i_grid+1) - nuc%energy(i_grid))
     end if
 
     micro_xs(i_nuclide) % index_grid    = i_grid

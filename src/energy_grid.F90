@@ -1,5 +1,6 @@
 module energy_grid
 
+  use ace_header,       only: RrrData
   use constants,        only: MAX_LINE_LEN
   use global
   use list_header,      only: ListReal
@@ -120,19 +121,21 @@ contains
 !===============================================================================
 ! GRID_POINTERS creates an array of pointers (ints) for each nuclide to link
 ! each point on the nuclide energy grid to one on the unionized energy grid
+! Updated to work with clustered data
+! Index of the left nuclide gridpoint given if union gridpoint is between two.
 !===============================================================================
 
   subroutine grid_pointers()
 
     integer :: i            ! loop index for nuclides
-    ! Actually, j is the loop index for the union energy grid
-    ! and index_e is the index of the nuclide energy grid
-    ! n_grid is the number of points of the unionized energy grid
-    integer :: j            ! loop index for nuclide energy grid
-    integer :: index_e      ! index on union energy grid
+    integer :: j            ! loop index for union energy grid
+    integer :: index_e      ! index of the nuclide energy grid (right index)
     real(8) :: union_energy ! energy on union grid
     real(8) :: energy       ! energy on nuclide grid
+    integer :: offset_c     ! offset into the codebook (clustering only)
+    integer :: offset_fast  ! offset into the fast region (clustering only)
     type(Nuclide), pointer :: nuc => null()
+    type(RrrData), pointer :: rrr => null()
 
     do i = 1, n_nuclides_total
       nuc => nuclides(i)
@@ -141,15 +144,52 @@ contains
       index_e = 1
       energy = nuc % energy(index_e)
 
-      do j = 1, n_grid
-        union_energy = e_grid(j)
-        if (union_energy >= energy .and. index_e < nuc % n_grid) then
-          index_e = index_e + 1
-          energy = nuc % energy(index_e)
-        end if
-        nuc % grid_index(j) = index_e - 1
-      end do
+      if (nuc % rrr_cluster) then
+        ! Within the clustered region the codebook is used for the grid index
+        ! Discontiguities of energy clusters cause more points to be in
+        ! the nuclide energy grid in the RRR than there are clusters
+        rrr => nuc % rrr_data
+        offset_c = rrr % i_low
+        offset_fast = rrr % n_clust - (rrr % i_high - rrr % i_low)
+        do j = 1, n_grid
+          union_energy = e_grid(j)
+          if (union_energy >= energy .and. index_e < nuc % n_grid) then
+            index_e = index_e + 1
+            energy = nuc % energy(index_e)
+          end if
+          if (index_e <= rrr % i_low) then
+            ! thermal region, no offset
+            nuc % grid_index(j) = index_e - 1
+          else if (index_e > rrr % i_high) then
+            ! fast region, offset
+            nuc % grid_index(j) = index_e + offset_fast - 1
+          else
+            ! RRR region, index from codebook plus offset
+            nuc % grid_index(j) = rrr % codebook(index_e - offset_c) + &
+              offset_c - 1
+          end if
+        end do
+      else
+        ! No clustering. Use normal indexing.
+        do j = 1, n_grid
+          union_energy = e_grid(j)
+          if (union_energy >= energy .and. index_e < nuc % n_grid) then
+            index_e = index_e + 1
+            energy = nuc % energy(index_e)
+          end if
+          nuc % grid_index(j) = index_e - 1
+        end do
+      end if
+      write (*,*) '---------------------------------'
+      write (*,*) nuc % name
+      write (*,'(8e14.6)') nuc % energy(1:200)
+      write (*,*) '---------------------------------'
+      write (*,'(8e14.6)') e_grid(1:200)
+      write (*,'(8i14)') nuc % grid_index(1:200)
+      write (*,*) '---------------------------------'
     end do
+
+
 
   end subroutine grid_pointers
 
