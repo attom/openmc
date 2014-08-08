@@ -197,6 +197,7 @@ contains
           i_grid = i_grid_R
         end if
         f = ZERO
+      end if
     end if
 
     micro_xs(i_nuclide) % index_grid    = i_grid
@@ -484,6 +485,7 @@ contains
 !===============================================================================
 ! FIND_ENERGY_INDEX determines the index on the union energy grid at a certain
 ! energy
+! If between two values in the grid, return the index of the left value.
 !===============================================================================
 
   subroutine find_energy_index(E)
@@ -494,7 +496,7 @@ contains
     ! index. Otherwise, do a binary search through the union energy grid.
     if (E < e_grid(1)) then
       union_grid_index = 1
-    elseif (E > e_grid(n_grid)) then
+    elseif (E > e_grid(n_grid)) then ! TODO CHANGE?? Worry about ac. n_grid+1
       union_grid_index = n_grid - 1
     else
       union_grid_index = binary_search(e_grid, n_grid, E)
