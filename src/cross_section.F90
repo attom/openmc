@@ -190,8 +190,8 @@ contains
       ! search to find the first energy
       if (cascade_index == 0) then
 
-        ! If the energy is outside of the augmented grid, set to first or last index.
-        ! Otherwise do a binary search.
+        ! If the particle's energy is outside of the augmented grid, set to first
+        ! or last index. Otherwise do a binary search
         if (E < nuc % aug_energy(1)) then
           cascade_index = 1
           i_grid = 1
