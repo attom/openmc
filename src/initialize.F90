@@ -2,6 +2,7 @@ module initialize
 
   use ace,              only: read_xs
   use bank_header,      only: Bank
+  use clustering,       only: cluster_all_nuclides
   use constants
   use dict_header,      only: DictIntInt, ElemKeyValueII
   use energy_grid,      only: unionized_grid
@@ -103,6 +104,13 @@ contains
       call time_read_xs % start()
       call read_xs()
       call time_read_xs % stop()
+
+      ! Cluster cross sections
+      if (clustering_on) then
+        call time_cluster % start()
+        call cluster_all_nuclides()
+        call time_cluster % stop()
+      end if
 
       ! Construct unionized energy grid from cross-sections
       if (grid_method == GRID_UNION) then
@@ -340,7 +348,7 @@ contains
           n_group_glob = int(str_to_int(argv(i)))
 
         case ('-f')
-          clustering_on = .false.
+          clustering_on = .false. ! delete
 
         case ('-p', '-plot', '--plot')
           run_mode = MODE_PLOTTING

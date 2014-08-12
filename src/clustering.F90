@@ -13,6 +13,21 @@ module clustering
 contains
 
 !===============================================================================
+! CLUSTER_ALL_NUCLIDES clusters the XS in the resolved resonance region (RRR)
+! for all the nuclides.
+!===============================================================================
+
+  subroutine cluster_all_nuclides()
+    integer :: i_nuclide
+
+    ! Assumes the nuclides go from 1 to n_nuclides_total.
+    do i_nuclide = 1, n_nuclides_total
+      call cluster_one_nuclide(i_nuclide)
+    end do
+
+  end subroutine
+
+!===============================================================================
 ! CLUSTER_ONE_NUCLIDE clusters the cross sections of one nuclide in the resolved
 ! resonance region
 !===============================================================================
@@ -36,7 +51,7 @@ contains
 
     nuc => nuclides(i_nuclide)
     ! Do not cluster light elements for now
-    if (.not. clustering_on .or. nuc % zaid <= 11000) return
+    if (nuc % zaid <= 11000) return
     !
     write (*,*) "Clustering nuclide ", nuc % name
     !write (*,*) "Using ", n_clust_glob, &
@@ -363,13 +378,13 @@ contains
     n_grid_new = n_therm + i_cur + n_fast
 
     ! write energy files for debug purposes (delete)
-    open(13, file='energy_' // trim(adjustl(nuc % name)) // '_old.txt')
-    write(13, '(1e20.12)') nuc % energy
-    close(13)
+    !open(13, file='energy_' // trim(adjustl(nuc % name)) // '_old.txt')
+    !write(13, '(1e20.12)') nuc % energy
+    !close(13)
     !
-    open(14, file='energy_' // trim(adjustl(nuc % name)) // '_new.txt')
-    write(14, '(1e20.12)') e_scratch(1:n_grid_new)
-    close(14)
+    !open(14, file='energy_' // trim(adjustl(nuc % name)) // '_new.txt')
+    !write(14, '(1e20.12)') e_scratch(1:n_grid_new)
+    !close(14)
 
     ! Update threshold indices. Because reactions will be accessed by a xs grid
     ! index, we offset threshold by the difference between the new xs size with
