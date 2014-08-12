@@ -1,6 +1,6 @@
 module cross_section
 
-  use ace_header,      only: Nuclide, SAlphaBeta, Reaction, UrrData
+  use ace_header,      only: Nuclide, SAlphaBeta, Reaction, UrrData, RrrData
   use constants
   use error,           only: fatal_error
   use fission,         only: nu_total
@@ -191,17 +191,20 @@ contains
       if (E < rrr % e_low) then
         ! Thermal: no offset
         i_grid = i_grid_e
-      else if (E > rrr % e_high) then
+      else if (E >= rrr % e_high) then
         ! Fast: offset is the size difference between the energy and xs grids
         i_grid = i_grid_e + rrr % offset_fast
       else
         ! RRR: use the codebook to look up where the xs is located
         i_codebook = i_grid_e - rrr % offset_rrr
-        if (f >= 0.5) then i_codebook = i_codebook + 1
+        if (f >= 0.5 .and. i_codebook < rrr % n_clust) then
+          i_codebook = i_codebook + 1
+        end if
         i_grid = rrr % codebook(i_codebook) + rrr % offset_rrr
         ! The clusters should not be interpolated, so use the closest one
         f = ZERO
       end if
+      ! off by one?
     else
       ! If no clustering is done, the energy and cross section grids coincide
       i_grid = i_grid_e

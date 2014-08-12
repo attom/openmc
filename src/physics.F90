@@ -180,7 +180,6 @@ contains
       ! Increment probability to compare to cutoff
       prob = prob + sigma
     end do
-    write (*,*) 'Nuclide found:', i_nuclide
 
   end function sample_nuclide
 
@@ -362,7 +361,7 @@ contains
       ! note that indexing starts from 2 since nuc % reactions(1) is elastic
       ! scattering
       i = 1
-      do while (prob < cutoff)
+            do while (prob < cutoff)
         i = i + 1
 
         ! Check to make sure inelastic scattering reaction sampled

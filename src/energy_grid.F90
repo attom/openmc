@@ -132,10 +132,7 @@ contains
     integer :: index_e      ! index of the nuclide energy grid (right index)
     real(8) :: union_energy ! energy on union grid
     real(8) :: energy       ! energy on nuclide grid
-    integer :: offset_c     ! offset into the codebook (clustering only)
-    integer :: offset_fast  ! offset into the fast region (clustering only)
     type(Nuclide), pointer :: nuc => null()
-    type(RrrData), pointer :: rrr => null()
 
     do i = 1, n_nuclides_total
       nuc => nuclides(i)
@@ -152,6 +149,7 @@ contains
         end if
         nuc % grid_index(j) = index_e - 1
       end do
+    end do
 
   end subroutine grid_pointers
 

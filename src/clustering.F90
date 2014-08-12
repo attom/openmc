@@ -304,6 +304,7 @@ contains
     integer :: n_rrr   ! size of RRR grid before clustering
     integer :: n_therm ! size of xs below the RRR
     integer :: n_fast  ! size of xs above RRR (includes URR and fast)
+    integer :: n_clust ! number of clusters
     integer :: n_grid_old, n_grid_new ! sizes of nuclide's energy grid
     real(8), allocatable :: e_scratch(:)  ! scratch space for energy grid
     integer, allocatable :: c_scratch(:) ! scratch for thinned grid codebook
@@ -321,6 +322,7 @@ contains
     n_therm = rrr % i_low - 1
     n_fast = nuc % n_grid - rrr % i_high
     n_rrr = rrr % i_high - rrr % i_low + 1
+    n_clust = rrr % n_clust
     offset_rrr = n_therm
     offset_fast = n_therm + n_rrr
     n_grid_old = size(nuc % energy)
@@ -369,12 +371,14 @@ contains
     write(14, '(1e20.12)') e_scratch(1:n_grid_new)
     close(14)
 
-    ! Update threshold indices.
-    ! This is is a lot of cache jumping.
+    ! Update threshold indices. Because reactions will be accessed by a xs grid
+    ! index, we offset threshold by the difference between the new xs size with
+    ! n_clust values in the RRR and the old xs size with n_rrr values in the
+    ! RRR.
     do i = 1, nuc % n_reaction
       rxn => nuc % reactions(i)
       if (rxn % threshold > rrr % i_high) then
-        rxn % threshold = rxn % threshold + i_cur - n_rrr
+        rxn % threshold = rxn % threshold + n_clust - n_rrr
       end if
     end do
 
@@ -384,8 +388,8 @@ contains
     ! Determine offsets, which will be used to convert pointers to the energy
     ! grid to pointers to the xs grid (they are now different because one
     ! cluster may be used several times on the energy grid).
-    rrr % offset_rrr = rrr %i_low
-    rrr % offset_fast = rrr % n_clust - (rrr % i_high - rrr % i_low)
+    rrr % offset_rrr = rrr %i_low - 1
+    rrr % offset_fast = rrr % n_clust - (rrr % i_high - rrr % i_low + 1)
 
     ! Move e_scratch to energy, trimming off unused values
     n_grid_new = n_therm + i_cur + n_fast
