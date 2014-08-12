@@ -201,6 +201,8 @@ contains
           ! If the energy is outside the grid, set index to last
           if (cascade_index > nuc_next % n_aug_grid) then
             i_grid = nuc_next % n_grid - 1
+          elseif (E < nuc_next % aug_energy(1)) then
+            i_grid = 1
 
           ! j is the approximate index of the particle's energy; find it's true
           ! index by making one comparison to the energy at next index
@@ -213,9 +215,6 @@ contains
             i_grid = nuc_next % aug_pointers(1, cascade_index) - 1
             cascade_index = nuc_next % aug_pointers(2, cascade_index)
           end if
-
-          if (i_grid < 1) i_grid = 1
-
         end do
 
       ! If we are on the top level of the cascading grid, we have to do a binary
