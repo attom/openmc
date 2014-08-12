@@ -100,12 +100,9 @@ contains
       call normalize_ao()
 
       ! Read ACE-format cross sections
-      clustering_on = .false. ! delete
       call time_read_xs % start()
       call read_xs()
       call time_read_xs % stop()
-      !message = 'Program in mixed state. It is unwise to continue.' ! delete
-      !call fatal_error() ! delete
 
       ! Construct unionized energy grid from cross-sections
       if (grid_method == GRID_UNION) then
@@ -341,6 +338,9 @@ contains
           n_clust_glob = int(str_to_int(argv(i)))
           i = i + 1
           n_group_glob = int(str_to_int(argv(i)))
+
+        case ('-f')
+          clustering_on = .false.
 
         case ('-p', '-plot', '--plot')
           run_mode = MODE_PLOTTING

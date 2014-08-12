@@ -180,6 +180,7 @@ contains
       ! Increment probability to compare to cutoff
       prob = prob + sigma
     end do
+    write (*,*) 'Nuclide found:', i_nuclide
 
   end function sample_nuclide
 

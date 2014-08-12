@@ -143,7 +143,6 @@ contains
 
     integer :: i_grid ! index on nuclide energy grid
     integer :: i_grid_L, i_grid_R ! left and right index on nuclide energy grid
-    integer :: i_offset ! clustering offset into nuclide energy grid
     real(8) :: f      ! interp factor on nuclide energy grid
     type(Nuclide), pointer, save :: nuc => null()
 !$omp threadprivate(nuc)
@@ -157,13 +156,20 @@ contains
       ! If we're using the unionized grid with pointers, finding the index on
       ! the nuclide energy grid is as simple as looking up the pointer
 
+      if (union_grid_index == n_grid) union_grid_index = union_grid_index - 1
       i_grid_L = nuc % grid_index(union_grid_index)
-      i_grid_R = nuc % grid_index(union_grid_index+1) ! TODO overflow?
+      i_grid_R = nuc % grid_index(union_grid_index+1)
 
     case (GRID_NUCLIDE)
       ! If we're not using the unionized grid, we have to do a binary search on
       ! the nuclide energy grid in order to determine which points to
       ! interpolate between
+
+      if (clustering_on) then
+        message = 'GRID_NUCLIDE not implemented with clustering. Aborting.'
+        call fatal_error()
+      end if
+      ! TODO (offsets + codebook lookup a la energy_grid if clustering)
 
       if (E < nuc % energy(1)) then
         i_grid_L = 1
@@ -171,10 +177,9 @@ contains
         i_grid_L = nuc % n_grid - 1
       else
         i_grid_L = binary_search(nuc % energy, nuc % n_grid, E)
-      ! TODO (offsets + codebook lookup a la energy_grid if clustering)
       end if
 
-      i_grid_R = i_grid_L + 1 ! TODO: change for clustering case
+      i_grid_R = i_grid_L + 1
 
     end select
 
@@ -185,10 +190,18 @@ contains
     end if
 
     ! calculate interpolation factor
-    f = (E - nuc%energy(i_grid_L))/(nuc%energy(i_grid_R) - nuc%energy(i_grid_L))
+    f = ZERO
+    if (i_grid_L /= i_grid_R) then
+      f = (E - nuc%energy(i_grid_L))/(nuc%energy(i_grid_R) - nuc%energy(i_grid_L))
+    end if
+    !write (*,*) nuc % name, i_grid_L, i_grid_R
+    !write (*,*) E, e_grid(union_grid_index), &
+    !  nuc%energy(i_grid_L), nuc % energy(i_grid_R)
+    ! NUC % GRID_INDEX calculation is wrong
 
     ! Do not interpolate clustered data because the rest of the code uses i_grid
     ! and i_grid+1, not i_grid_L and i_grid_R. Use closest gridpoint instead.
+    i_grid = i_grid_L
     if (nuc % rrr_cluster) then
       if (E >= nuc % rrr_data % e_low .and. E <= nuc % rrr_data % e_high) then
         if (f < 0.5) then
@@ -214,6 +227,7 @@ contains
     micro_xs(i_nuclide) % kappa_fission  = ZERO
 
     ! Calculate microscopic nuclide total cross section
+    !write (*,*) i_nuclide, i_grid, f, nuc % total(i_grid)
     micro_xs(i_nuclide) % total = (ONE - f) * nuc % total(i_grid) &
          + f * nuc % total(i_grid+1)
 

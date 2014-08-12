@@ -208,13 +208,13 @@ contains
         n_therm = rrr % i_low - rxn % threshold
         n_rrr = rrr % i_high - rrr % i_low + 1
         n_fast = nuc % n_grid - rrr % i_high
-        write (*,*) rxn % MT
+        !write (*,*) rxn % MT
         call condense_one_xs(rxn % sigma, rrr % codebook, n_therm, n_fast, &
           n_clust, n_rrr)
       else if (rxn % MT < N_GAMMA .and. &
           rxn % threshold <= rrr % i_high .and. &
           rxn % threshold >= rrr % i_low) then
-        write (*,*) rxn % MT, rxn % threshold, rrr % i_low, rrr % i_high
+        !write (*,*) rxn % MT, rxn % threshold, rrr % i_low, rrr % i_high
         message = "Assumed no thresholds in the RRR for clustering. Aborting."
         call fatal_error()
       end if
