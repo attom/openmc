@@ -381,6 +381,12 @@ contains
     ! Update i_high index
     rrr % i_high = rrr % i_high + i_cur - n_rrr
 
+    ! Determine offsets, which will be used to convert pointers to the energy
+    ! grid to pointers to the xs grid (they are now different because one
+    ! cluster may be used several times on the energy grid).
+    rrr % offset_rrr = rrr %i_low
+    rrr % offset_fast = rrr % n_clust - (rrr % i_high - rrr % i_low)
+
     ! Move e_scratch to energy, trimming off unused values
     n_grid_new = n_therm + i_cur + n_fast
     deallocate(nuc % energy)

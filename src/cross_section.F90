@@ -140,11 +140,12 @@ contains
     integer, intent(in) :: i_nuclide ! index into nuclides array
     integer, intent(in) :: i_sab     ! index into sab_tables array
     real(8), intent(in) :: E         ! energy
-
-    integer :: i_grid ! index on nuclide energy grid
-    integer :: i_grid_L, i_grid_R ! left and right index on nuclide energy grid
-    real(8) :: f      ! interp factor on nuclide energy grid
+    integer :: i_grid_e   ! index on nuclide energy grid
+    integer :: i_codebook ! index into the clustering codebook
+    integer :: i_grid     ! index on nuclide cross section grid
+    real(8) :: f          ! interp factor on nuclide energy grid
     type(Nuclide), pointer, save :: nuc => null()
+    type(RrrData), pointer :: rrr => null()
 !$omp threadprivate(nuc)
 
     ! Set pointer to nuclide
@@ -156,61 +157,54 @@ contains
       ! If we're using the unionized grid with pointers, finding the index on
       ! the nuclide energy grid is as simple as looking up the pointer
 
-      if (union_grid_index == n_grid) union_grid_index = union_grid_index - 1
-      i_grid_L = nuc % grid_index(union_grid_index)
-      i_grid_R = nuc % grid_index(union_grid_index+1)
+      i_grid_e = nuc % grid_index(union_grid_index)
 
     case (GRID_NUCLIDE)
       ! If we're not using the unionized grid, we have to do a binary search on
       ! the nuclide energy grid in order to determine which points to
       ! interpolate between
 
-      if (clustering_on) then
-        message = 'GRID_NUCLIDE not implemented with clustering. Aborting.'
-        call fatal_error()
-      end if
-      ! TODO (offsets + codebook lookup a la energy_grid if clustering)
-
       if (E < nuc % energy(1)) then
-        i_grid_L = 1
+        i_grid_e = 1
       elseif (E > nuc % energy(nuc % n_grid)) then
-        i_grid_L = nuc % n_grid - 1
+        i_grid_e = nuc % n_grid - 1
       else
-        i_grid_L = binary_search(nuc % energy, nuc % n_grid, E)
+        i_grid_e = binary_search(nuc % energy, nuc % n_grid, E)
       end if
-
-      i_grid_R = i_grid_L + 1
 
     end select
 
     ! check for rare case where two energy points are the same
-    if (nuc % energy(i_grid_L) == nuc % energy(i_grid_R)) then
-      i_grid_L = i_grid_L + 1
-      i_grid_R = i_grid_R + 1
+    if (nuc % energy(i_grid_e) == nuc % energy(i_grid_e+1)) then
+      i_grid_e = i_grid_e + 1
     end if
 
     ! calculate interpolation factor
-    f = ZERO
-    if (i_grid_L /= i_grid_R) then
-      f = (E - nuc%energy(i_grid_L))/(nuc%energy(i_grid_R) - nuc%energy(i_grid_L))
-    end if
-    !write (*,*) nuc % name, i_grid_L, i_grid_R
-    !write (*,*) E, e_grid(union_grid_index), &
-    !  nuc%energy(i_grid_L), nuc % energy(i_grid_R)
-    ! NUC % GRID_INDEX calculation is wrong
+    f = (E - nuc%energy(i_grid_e))/(nuc%energy(i_grid_e+1)-nuc%energy(i_grid_e))
 
-    ! Do not interpolate clustered data because the rest of the code uses i_grid
-    ! and i_grid+1, not i_grid_L and i_grid_R. Use closest gridpoint instead.
-    i_grid = i_grid_L
+    ! calculate xs grid index from energy grid index
     if (nuc % rrr_cluster) then
-      if (E >= nuc % rrr_data % e_low .and. E <= nuc % rrr_data % e_high) then
-        if (f < 0.5) then
-          i_grid = i_grid_L
-        else
-          i_grid = i_grid_R
-        end if
+      rrr => nuc % rrr_data
+      ! A mapping is required because there are more energy grid points than xs
+      ! grid points because one cluster may appear several times in the energy
+      ! grid but is stored only once for each cross section.
+      if (E < rrr % e_low) then
+        ! Thermal: no offset
+        i_grid = i_grid_e
+      else if (E > rrr % e_high) then
+        ! Fast: offset is the size difference between the energy and xs grids
+        i_grid = i_grid_e + rrr % offset_fast
+      else
+        ! RRR: use the codebook to look up where the xs is located
+        i_codebook = i_grid_e - rrr % offset_rrr
+        if (f >= 0.5) then i_codebook = i_codebook + 1
+        i_grid = rrr % codebook(i_codebook) + rrr % offset_rrr
+        ! The clusters should not be interpolated, so use the closest one
         f = ZERO
       end if
+    else
+      ! If no clustering is done, the energy and cross section grids coincide
+      i_grid = i_grid_e
     end if
 
     micro_xs(i_nuclide) % index_grid    = i_grid

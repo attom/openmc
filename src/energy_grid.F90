@@ -144,55 +144,14 @@ contains
       index_e = 1
       energy = nuc % energy(index_e)
 
-      if (nuc % rrr_cluster) then
-        ! Within the clustered region the codebook is used for the grid index
-        ! Discontiguities of energy clusters cause more points to be in
-        ! the nuclide energy grid (in the RRR) than there are clusters, which
-        ! means offsets must be used in the indexing.
-        rrr => nuc % rrr_data
-        offset_c = rrr % i_low
-        offset_fast = rrr % n_clust - (rrr % i_high - rrr % i_low)
-        !write (*,*) nuc % name, rrr % i_low, rrr % i_high, rrr % n_clust, &
-        !  nuc % n_grid
-        do j = 1, n_grid
-          union_energy = e_grid(j)
-          if (union_energy >= energy .and. index_e < nuc % n_grid) then
-            index_e = index_e + 1
-            energy = nuc % energy(index_e)
-          end if
-          if (index_e <= rrr % i_low) then
-            ! thermal region, no offset
-            nuc % grid_index(j) = index_e - 1
-          else if (index_e > rrr % i_high) then
-            ! fast region, offset
-            nuc % grid_index(j) = index_e + offset_fast - 1
-          else
-            ! RRR region, index from codebook plus offset
-            nuc % grid_index(j) = rrr % codebook(index_e - offset_c) + &
-              offset_c - 1
-          end if
-        end do
-      else
-        ! No clustering. Use normal indexing.
-        do j = 1, n_grid
-          union_energy = e_grid(j)
-          if (union_energy >= energy .and. index_e < nuc % n_grid) then
-            index_e = index_e + 1
-            energy = nuc % energy(index_e)
-          end if
-          nuc % grid_index(j) = index_e - 1
-        end do
-      end if
-      !write (*,*) '---------------------------------'
-      !write (*,*) nuc % name
-      !write (*,'(8e14.6)') nuc % energy(1:200)
-      !write (*,*) '---------------------------------'
-      !write (*,'(8e14.6)') e_grid(1:200)
-      !write (*,'(8i14)') nuc % grid_index(1:200)
-      !write (*,*) '---------------------------------'
-    end do
-
-
+      do j = 1, n_grid
+        union_energy = e_grid(j)
+        if (union_energy >= energy .and. index_e < nuc % n_grid) then
+          index_e = index_e + 1
+          energy = nuc % energy(index_e)
+        end if
+        nuc % grid_index(j) = index_e - 1
+      end do
 
   end subroutine grid_pointers
 
