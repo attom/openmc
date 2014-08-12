@@ -186,22 +186,31 @@ contains
 
     case (GRID_CASCADE)
 
+      ! If the energy is outside of the augmented grid, set to first or last index
+      if (E < nuc % aug_energy(1)) then
+        cascade_index = 1
+        i_grid = 1
+ 
+      else if (E > nuc % aug_energy(nuc % n_aug_grid)) then
+        cascade_index = nuc % n_aug_grid
+        i_grid = nuc % n_grid - 1
+
       ! If we are on the top level of the cascading grid, we have to do a binary
       ! search to find the first energy
-      if (cascade_index == 0) then
+      else if (cascade_index == 0) then
 
         ! If the particle's energy is outside of the augmented grid, set to first
         ! or last index. Otherwise do a binary search
-        if (E < nuc % aug_energy(1)) then
-          cascade_index = 1
-          i_grid = 1
-        elseif (E > nuc % aug_energy(nuc % n_aug_grid)) then
-          cascade_index = nuc % n_aug_grid
-          i_grid = nuc % n_grid - 1
-        else
+!        if (E < nuc % aug_energy(1)) then
+!          cascade_index = 1
+!          i_grid = 1
+!        elseif (E > nuc % aug_energy(nuc % n_aug_grid)) then
+!          cascade_index = nuc % n_aug_grid
+!          i_grid = nuc % n_grid - 1
+!        else
           cascade_index = binary_search(nuc % aug_energy, nuc % n_aug_grid, E) + 1
           i_grid = nuc % aug_pointers(1, cascade_index) - 1
-        end if
+!        end if
 
         ! update cascade_index to be the approximate index of the particle's energy
         ! in the next nuclide
@@ -238,6 +247,8 @@ contains
         end do
       end if
     end select
+
+!    if (i_grid < 1) i_grid = 1
 
     ! check for rare case where two energy points are the same
     if (nuc % energy(i_grid) == nuc % energy(i_grid+1)) i_grid = i_grid + 1

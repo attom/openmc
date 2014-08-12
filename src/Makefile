@@ -10,8 +10,8 @@ xml_lib = -Lxml/lib -lxml
 #===============================================================================
 
 COMPILER = gnu
-DEBUG    = no
-PROFILE  = yes
+DEBUG    = yes
+PROFILE  = no
 OPTIMIZE = no
 MPI      = no
 OPENMP   = yes
