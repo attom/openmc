@@ -186,9 +186,31 @@ contains
 
     case (GRID_CASCADE)
 
+      ! If we are on the top level of the cascading grid, we have to do a binary
+      ! search to find the first energy
+      if (cascade_index == 0) then
+
+        ! If the energy is outside of the augmented grid, set to first or last index.
+        ! Otherwise do a binary search.
+        if (E < nuc % aug_energy(1)) then
+          cascade_index = 1
+          i_grid = 1
+        elseif (E > nuc % aug_energy(nuc % n_aug_grid)) then
+          cascade_index = nuc % n_aug_grid
+          i_grid = nuc % n_grid - 1
+        else
+          cascade_index = binary_search(nuc % aug_energy, nuc % n_aug_grid, E) + 1
+          i_grid = nuc % aug_pointers(1, cascade_index) - 1
+
+        ! update cascade_index to be the approximate index of the particle's energy
+        ! in the next nuclide
+        cascade_index = nuc % aug_pointers(2, cascade_index)
+        last_i_nuclide = i_nuclide
+        end if
+
       ! If we are not on the first nuclide follow the pointer to the energy's
       ! index in the next augmented grid
-      if (cascade_index > 0) then
+      else
 
         ! Continue following the pointers to the next augmented grid until we 
         ! reach the nuclide we are looking for
@@ -216,29 +238,6 @@ contains
             cascade_index = nuc_next % aug_pointers(2, cascade_index)
           end if
         end do
-
-      ! If we are on the top level of the cascading grid, we have to do a binary
-      ! search to find the first energy
-      else
-
-        ! If the energy is outside of the augmented grid, set to first or last index.
-        ! Otherwise do a binary search.
-        if (E < nuc % aug_energy(1)) then
-          cascade_index = 1
-          i_grid = 1
-        elseif (E > nuc % aug_energy(nuc % n_aug_grid)) then
-          cascade_index = nuc % n_aug_grid
-          i_grid = nuc % n_grid - 1
-        else
-          cascade_index = binary_search(nuc % aug_energy, nuc % n_aug_grid, E) + 1
-          i_grid = nuc % aug_pointers(1, cascade_index) - 1
-
-        ! update cascade_index to be the approximate index of the particle's energy
-        ! in the next nuclide
-        cascade_index = nuc % aug_pointers(2, cascade_index)
-        last_i_nuclide = i_nuclide
-
-        end if
       end if
     end select
 
