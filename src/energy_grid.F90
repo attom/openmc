@@ -1,6 +1,5 @@
 module energy_grid
 
-  use ace_header,       only: RrrData
   use constants,        only: MAX_LINE_LEN
   use global
   use list_header,      only: ListReal

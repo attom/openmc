@@ -141,12 +141,11 @@ contains
     integer, intent(in) :: i_sab     ! index into sab_tables array
     real(8), intent(in) :: E         ! energy
     integer :: i_grid_e   ! index on nuclide energy grid
-    integer :: i_codebook ! index into the clustering codebook
     integer :: i_grid     ! index on nuclide cross section grid
     real(8) :: f          ! interp factor on nuclide energy grid
     type(Nuclide), pointer, save :: nuc => null()
-    type(RrrData), pointer :: rrr => null()
-!$omp threadprivate(nuc)
+    type(RrrData), pointer, save :: rrr => null()
+!$omp threadprivate(nuc, rrr)
 
     ! Set pointer to nuclide
     nuc => nuclides(i_nuclide)
@@ -196,15 +195,10 @@ contains
         i_grid = i_grid_e + rrr % offset_fast
       else
         ! RRR: use the codebook to look up where the xs is located
-        i_codebook = i_grid_e - rrr % offset_rrr
-        if (f >= 0.5 .and. i_codebook < rrr % n_clust) then
-          i_codebook = i_codebook + 1
-        end if
-        i_grid = rrr % codebook(i_codebook) + rrr % offset_rrr
-        ! The clusters should not be interpolated, so use the closest one
+        i_grid = rrr % codebook(i_grid_e - rrr % offset_rrr) + rrr % offset_rrr
+        ! The clustered XS applies to the entire range. Do not interpolate.
         f = ZERO
       end if
-      ! off by one?
     else
       ! If no clustering is done, the energy and cross section grids coincide
       i_grid = i_grid_e

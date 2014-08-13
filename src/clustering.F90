@@ -21,9 +21,11 @@ contains
     integer :: i_nuclide
 
     ! Assumes the nuclides go from 1 to n_nuclides_total.
+!$omp parallel do schedule(dynamic)
     do i_nuclide = 1, n_nuclides_total
       call cluster_one_nuclide(i_nuclide)
     end do
+!$omp end parallel do
 
   end subroutine
 
@@ -41,13 +43,12 @@ contains
     integer :: n_rxn                       ! number of reactions to cluster
     logical err_flag ! false if clustering was successful
     real(8) :: SMALL = 1E-11_8 ! a small value so log calls are robust
-    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
-    type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
-    type(Reaction), pointer :: rxn => null() ! pointer to nuclide's rxn data
+    type(Nuclide), pointer, save :: nuc => null() ! pointer to nuclide
+    type(RrrData), pointer, save :: rrr => null() ! ptr to nuclide's clust data
+    type(Reaction), pointer, save :: rxn => null() ! ptr to nuclide's rxn data
     integer :: threshold ! integer where the reaction begins in the energy grid
     integer :: i
-    integer j ! delete
-    j = 0 ! delete
+!$omp threadprivate(nuc, rrr, rxn)
 
     nuc => nuclides(i_nuclide)
     ! Do not cluster light elements for now
@@ -171,12 +172,12 @@ contains
     integer :: n_therm ! size of xs below the RRR
     integer :: n_fast  ! size of xs above RRR (includes URR and fast)
     integer :: n_clust ! size of RRR after clustering
-    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
-    type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
-    type(Reaction), pointer :: rxn => null() ! pointer to nuclide reaction data
+    integer i
+    type(Nuclide), pointer, save :: nuc => null() ! pointer to nuclide
+    type(RrrData), pointer, save :: rrr => null() ! ptr to nuclide's clust data
+    type(Reaction), pointer, save :: rxn => null() ! ptr to nuclide reaction dat
     integer :: n_xs_old, n_xs_new  ! delete
-    integer i ! delete
-    i = 0 ! delete
+!$omp threadprivate(nuc, rrr, rxn)
 
     ! Determine sizes and set pointers
     nuc => nuclides(i_nuclide)
@@ -323,13 +324,14 @@ contains
     integer :: n_grid_old, n_grid_new ! sizes of nuclide's energy grid
     real(8), allocatable :: e_scratch(:)  ! scratch space for energy grid
     integer, allocatable :: c_scratch(:) ! scratch for thinned grid codebook
-    type(Nuclide), pointer :: nuc => null() ! pointer to nuclide
-    type(RrrData), pointer :: rrr => null() ! pointer to nuclide's clust data
-    type(Reaction), pointer :: rxn => null() ! pointer to nuclide reaction data
+    type(Nuclide), pointer, save :: nuc => null() ! pointer to nuclide
+    type(RrrData), pointer, save :: rrr => null() ! ptr to nuclide's clust data
+    type(Reaction), pointer, save :: rxn => null() ! ptr to nuclide reaction dat
     integer :: i_cur ! current location in e_scratch / c_scratch
     integer :: i_clust, i_clust_old ! indices for cluster
     integer :: offset_rrr, offset_fast ! xs array offsets
     integer :: i, strt, endd ! indices for arrays and loops
+!$omp threadprivate(nuc, rrr, rxn)
 
     ! Determine sizes and set pointers and offsets
     nuc => nuclides(i_nuclide)

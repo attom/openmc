@@ -7,6 +7,7 @@ module initialize
   use dict_header,      only: DictIntInt, ElemKeyValueII
   use energy_grid,      only: unionized_grid
   use error,            only: fatal_error, warning
+  !use finalize,         only: finalize_run ! delete!
   use geometry,         only: neighbor_lists
   use geometry_header,  only: Cell, Universe, Lattice, BASE_UNIVERSE
   use global
@@ -111,6 +112,8 @@ contains
         call cluster_all_nuclides()
         call time_cluster % stop()
       end if
+      !call finalize_run()
+      !call fatal_error()
 
       ! Construct unionized energy grid from cross-sections
       if (grid_method == GRID_UNION) then
