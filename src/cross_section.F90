@@ -201,12 +201,12 @@ contains
         else
           cascade_index = binary_search(nuc % aug_energy, nuc % n_aug_grid, E) + 1
           i_grid_e = nuc % aug_pointers(1, cascade_index) - 1
+        end if
 
         ! update cascade_index to be the approximate index of the particle's energy
         ! in the next nuclide
         cascade_index = nuc % aug_pointers(2, cascade_index)
         last_i_nuclide = i_nuclide
-        end if
 
       ! If we are not on the first nuclide follow the pointer to the energy's
       ! index in the next augmented grid
