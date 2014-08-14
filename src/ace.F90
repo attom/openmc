@@ -41,6 +41,8 @@ contains
     integer :: m            ! position for sorting
     integer :: temp_nuclide ! temporary value for sorting
     integer :: temp_table   ! temporary value for sorting
+    real(8) :: temp_density ! temporary value for sorting
+    integer :: temp_sab     ! temporary value for sorting
     character(12)  :: name  ! name of isotope, e.g. 92235.03c
     character(12)  :: alias ! alias of nuclide, e.g. U-235.03c
     type(Material),   pointer :: mat => null()
@@ -130,6 +132,41 @@ contains
           call fatal_error()
         end if
       end do ASSIGN_SAB
+
+      ! We need to make sure the entries in nuclides are sorted or else they
+      ! won't be applied correctly in the cross_section module. The algorithm
+      ! here is a simple insertion sort -- don't need anything fancy!
+
+      SORT_NUC: do k = 2, mat % n_nuclides
+        m = k
+        temp_nuclide = mat % nuclide(k)
+        temp_density = mat % atom_density(k)
+        if (mat % n_sab > 0) then
+          temp_sab = 0
+          if (any(mat % i_sab_nuclides == k)) temp_sab = k
+        end if
+
+        do
+          if (temp_nuclide >= mat % nuclide(m-1)) exit
+          mat % nuclide(m) = mat % nuclide(m-1)
+          mat % atom_density(m) = mat % atom_density(m-1)
+          if (mat % n_sab > 0) then
+            if (any(mat % i_sab_nuclides == m-1)) then
+              where (mat % i_sab_nuclides == m-1) mat % i_sab_nuclides = m
+            end if
+          end if
+          m = m - 1
+          if (m == 1) exit
+        end do
+
+        mat % nuclide(m) = temp_nuclide
+        mat % atom_density(m) = temp_density
+        if (mat % n_sab > 0) then
+          if (temp_sab == k) then
+            where (mat % i_sab_nuclides == k) mat % i_sab_nuclides = m
+          end if
+        end if
+      end do SORT_NUC
 
       ! If there are multiple S(a,b) tables, we need to make sure that the
       ! entries in i_sab_nuclides are sorted or else they won't be applied

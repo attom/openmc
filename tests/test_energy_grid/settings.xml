@@ -1,7 +1,9 @@
 <?xml version="1.0"?>
 <settings>
 
-  <energy_grid>nuclide</energy_grid>
+  <energy_grid>
+    union
+  </energy_grid>
 
   <eigenvalue>
     <batches>10</batches>

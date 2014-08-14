@@ -93,6 +93,7 @@ EVENT_SCATTER	constants.F90	/^       EVENT_LATTICE = -1, &$/;"	v	module:constant
 EVENT_SURFACE	constants.F90	/^  integer, parameter :: &$/;"	v	module:constants
 E_1	physics.F90	/^    real(8) :: E_1,/;"	L	subroutine:sample_energy	file:
 E_K	physics.F90	/^    real(8) :: E_1, E_K /;"	L	subroutine:sample_energy	file:
+E_aug	energy_grid.F90	/^    real(8) :: E_aug /;"	L	subroutine:cascading_grid	file:
 E_cm	physics.F90	/^    real(8) :: E_cm /;"	L	subroutine:inelastic_scatter	file:
 E_i1_1	physics.F90	/^    real(8) :: E_i1_1,/;"	L	subroutine:sample_energy	file:
 E_i1_K	physics.F90	/^    real(8) :: E_i1_1, E_i1_K /;"	L	subroutine:sample_energy	file:
@@ -105,6 +106,7 @@ E_in	physics.F90	/^    real(8), intent(in)              :: E_in /;"	L	subroutine
 E_l_k	physics.F90	/^    real(8) :: E_l_k,/;"	L	subroutine:sample_energy	file:
 E_l_k1	physics.F90	/^    real(8) :: E_l_k, E_l_k1 /;"	L	subroutine:sample_energy	file:
 E_max	physics.F90	/^    real(8) :: E_max /;"	L	subroutine:sample_energy	file:
+E_nuc	energy_grid.F90	/^    real(8) :: E_nuc /;"	L	subroutine:cascading_grid	file:
 E_out	math.F90	/^    real(8)              :: E_out /;"	L	function:maxwell_spectrum	file:
 E_out	math.F90	/^    real(8)             :: E_out /;"	L	function:watt_spectrum	file:
 E_out	physics.F90	/^    real(8)                 :: E_out /;"	L	function:sample_fission_energy	file:
@@ -132,6 +134,7 @@ FREE_GAS_THRESHOLD	constants.F90	/^  real(8), parameter :: FREE_GAS_THRESHOLD /;
 F_a	doppler.F90	/^    real(8)              :: F_a(/;"	L	subroutine:broaden	file:
 F_b	doppler.F90	/^    real(8)              :: F_b(/;"	L	subroutine:broaden	file:
 GMRESSolver	solver_interface.F90	/^  type, public :: GMRESSolver /;"	t	module:solver_interface
+GRID_CASCADE	constants.F90	/^       GRID_LETHARGY = 3, & ! lethargy mapping$/;"	v	module:constants
 GRID_LETHARGY	constants.F90	/^       GRID_UNION    = 2, & ! union grid with pointers$/;"	v	module:constants
 GRID_NUCLIDE	constants.F90	/^  integer, parameter :: &$/;"	v	module:constants
 GRID_UNION	constants.F90	/^       GRID_NUCLIDE  = 1, & ! non-unionized energy grid$/;"	v	module:constants
@@ -169,6 +172,7 @@ JXS7	ace.F90	/^    integer :: JXS7 /;"	L	subroutine:read_reactions	file:
 JXS8	ace.F90	/^    integer :: JXS8 /;"	L	subroutine:read_angular_dist	file:
 JXS9	ace.F90	/^    integer :: JXS9 /;"	L	subroutine:read_angular_dist	file:
 Jfnk_ctx	solver_interface.F90	/^  type, public :: Jfnk_ctx$/;"	t	module:solver_interface
+KB	clustering.F90	/^    integer :: KB /;"	L	subroutine:get_xs_sizes	file:
 KM_A	physics.F90	/^    real(8) :: KM_A /;"	L	subroutine:sample_energy	file:
 KM_R	physics.F90	/^    real(8) :: KM_R /;"	L	subroutine:sample_energy	file:
 KNU	ace.F90	/^    integer :: KNU /;"	L	subroutine:read_nu_data	file:
@@ -239,6 +243,7 @@ MAX_LOST_PARTICLES	constants.F90	/^  integer, parameter :: MAX_LOST_PARTICLES /;
 MAX_SAMPLE	constants.F90	/^  integer, parameter :: MAX_SAMPLE /;"	v	module:constants
 MAX_WORDS	constants.F90	/^  integer, parameter :: MAX_WORDS /;"	v	module:constants
 MAX_WORD_LEN	constants.F90	/^  integer, parameter :: MAX_WORD_LEN /;"	v	module:constants
+MB	clustering.F90	/^    integer :: MB /;"	L	subroutine:get_xs_sizes	file:
 MISC	constants.F90	/^       N_LEVEL     = 4, &$/;"	v	module:constants
 MODE_EIGENVALUE	constants.F90	/^       MODE_FIXEDSOURCE = 1, & ! Fixed source mode$/;"	v	module:constants
 MODE_FIXEDSOURCE	constants.F90	/^  integer, parameter ::        &$/;"	v	module:constants
@@ -552,6 +557,8 @@ attr_str	hdf5_interface.F90	/^    character(*),   intent(in) :: attr_str /;"	L	s
 attr_str	output_interface.F90	/^    character(*), intent(in)           :: attr_str /;"	L	subroutine:write_attribute_string	file:
 attr_type	hdf5_interface.F90	/^    character(*),   intent(in) :: attr_type /;"	L	subroutine:hdf5_write_attribute_string	file:
 attr_type	output_interface.F90	/^    character(*), intent(in)           :: attr_type /;"	L	subroutine:write_attribute_string	file:
+aug_energy	ace_header.F90	/^    real(8), allocatable :: aug_energy(/;"	k	type:Nuclide
+aug_pointers	ace_header.F90	/^    integer, allocatable :: aug_pointers(/;"	k	type:Nuclide
 awr	ace.F90	/^    real(8)       :: awr /;"	L	subroutine:read_ace_table	file:
 awr	ace_header.F90	/^    real(8)       :: awr /;"	k	type:Nuclide
 awr	ace_header.F90	/^    real(8)       :: awr /;"	k	type:SAlphaBeta
@@ -748,6 +755,8 @@ calculate_urr_xs	cross_section.F90	/^  subroutine calculate_urr_xs(/;"	s	module:
 calculate_work	initialize.F90	/^  subroutine calculate_work(/;"	s	module:initialize
 calculate_xs	cross_section.F90	/^  subroutine calculate_xs(/;"	s	module:cross_section
 capture	cross_section.F90	/^    real(8) :: capture /;"	L	subroutine:calculate_urr_xs	file:
+cascade_index	cross_section.F90	/^  integer :: cascade_index$/;"	v	module:cross_section
+cascading_grid	energy_grid.F90	/^  subroutine cascading_grid(/;"	s	module:energy_grid
 cell	particle_header.F90	/^    integer :: cell /;"	k	type:LocalCoord
 cell_born	particle_header.F90	/^    integer    :: cell_born /;"	k	type:Particle
 cell_dc	cmfd_data.F90	/^    real(8) :: cell_dc /;"	L	subroutine:compute_dtilde	file:
@@ -1322,6 +1331,7 @@ get_reflector_albedo	cmfd_data.F90	/^    real(8) :: get_reflector_albedo /;"	L	f
 get_reflector_albedo	cmfd_data.F90	/^  function get_reflector_albedo(/;"	f	module:cmfd_data
 get_scoring_bins	tally.F90	/^  subroutine get_scoring_bins(/;"	s	module:tally
 get_source_particle	source.F90	/^  subroutine get_source_particle(/;"	s	module:source
+get_xs_sizes	clustering.F90	/^  subroutine get_xs_sizes(/;"	s	module:clustering
 global	global.F90	/^module global$/;"	m
 global_temp	state_point.F90	/^    real(8), target :: global_temp(/;"	L	subroutine:write_tally_results_nr	file:
 global_temp	tally.F90	/^    real(8) :: global_temp(/;"	L	subroutine:reduce_tally_results	file:
@@ -1517,6 +1527,7 @@ i	ace.F90	/^    in/;"	L	subroutine:read_reactions	file:
 i	ace.F90	/^    in/;"	L	subroutine:read_thermal_data	file:
 i	ace.F90	/^    in/;"	L	subroutine:read_unr_res	file:
 i	ace.F90	/^    in/;"	L	subroutine:read_xs	file:
+i	clustering.F90	/^    in/;"	L	subroutine:apply_clustering_to_all_xs	file:
 i	clustering.F90	/^    in/;"	L	subroutine:condense_one_xs	file:
 i	clustering.F90	/^    in/;"	L	subroutine:reorder_clusters	file:
 i	cmfd_data.F90	/^    in/;"	L	function:get_reflector_albedo	file:
@@ -1549,6 +1560,7 @@ i	eigenvalue.F90	/^    in/;"	L	subroutine:join_bank_from_threads	file:
 i	eigenvalue.F90	/^    in/;"	L	subroutine:shannon_entropy	file:
 i	eigenvalue.F90	/^    in/;"	L	subroutine:synchronize_bank	file:
 i	energy_grid.F90	/^    in/;"	L	subroutine:add_grid_points	file:
+i	energy_grid.F90	/^    in/;"	L	subroutine:cascading_grid	file:
 i	energy_grid.F90	/^    in/;"	L	subroutine:grid_pointers	file:
 i	energy_grid.F90	/^    in/;"	L	subroutine:unionized_grid	file:
 i	fission.F90	/^    in/;"	L	function:nu_prompt	file:
@@ -1632,14 +1644,15 @@ i	tally.F90	/^    in/;"	L	subroutine:synchronize_tallies	file:
 i	tally.F90	/^    in/;"	L	subroutine:tally_statistics	file:
 i	tally_initialize.F90	/^    in/;"	L	subroutine:setup_tally_arrays	file:
 i	tally_initialize.F90	/^    in/;"	L	subroutine:setup_tally_maps	file:
+i_2nd	clustering.F90	/^    integer :: i_2nd /;"	L	subroutine:get_xs_sizes	file:
 i_array	initialize.F90	/^    integer :: i_array /;"	L	subroutine:adjust_indices	file:
+i_aug	energy_grid.F90	/^    integer :: i_aug /;"	L	subroutine:cascading_grid	file:
 i_bank	initialize.F90	/^    integer(8) :: i_bank /;"	L	subroutine:calculate_work	file:
 i_clust	clustering.F90	/^    integer :: i, strt, endd, i_clust /;"	L	subroutine:condense_one_xs	file:
 i_clust	clustering.F90	/^    integer :: i_clust /;"	L	subroutine:reorder_clusters	file:
 i_clust	clustering_kmeans.F90	/^    integer :: i_dim, i_feat, i_clust$/;"	L	subroutine:print_kms	file:
 i_clust	clustering_kmeans.F90	/^    integer :: i_feat, i_clust$/;"	L	subroutine:kms_compute_distances	file:
 i_clust	clustering_kmeans.F90	/^    integer :: i_feat, i_clust$/;"	L	subroutine:kms_update_clust_cen	file:
-i_codebook	cross_section.F90	/^    integer :: i_codebook /;"	L	subroutine:calculate_nuclide_xs	file:
 i_cur	clustering.F90	/^    integer :: i_cur /;"	L	subroutine:reorder_clusters	file:
 i_dim	clustering_kmeans.F90	/^    integer :: i_dim,/;"	L	subroutine:print_kms	file:
 i_eig	cmfd_slepc_solver.F90	/^    integer              :: i_eig /;"	L	subroutine:extract_results	file:
@@ -1680,8 +1693,10 @@ i_listing	output.F90	/^    integer :: i_listing /;"	L	subroutine:write_tallies	f
 i_low	ace_header.F90	/^    integer :: i_low /;"	k	type:RrrData
 i_mesh	cmfd_data.F90	/^    integer :: i_mesh /;"	L	subroutine:compute_xs	file:
 i_mesh	input_xml.F90	/^    integer :: i_mesh /;"	L	subroutine:read_tallies_xml	file:
+i_nuc	energy_grid.F90	/^    integer :: i_nuc /;"	L	subroutine:cascading_grid	file:
 i_nuc	tally.F90	/^    integer :: i_nuc /;"	L	subroutine:score_tracklength_tally	file:
 i_nuclide	ace.F90	/^    integer :: i_nuclide /;"	L	subroutine:read_xs	file:
+i_nuclide	clustering.F90	/^    integer :: i_nuclide /;"	L	subroutine:get_xs_sizes	file:
 i_nuclide	clustering.F90	/^    integer :: i_nuclide$/;"	L	subroutine:cluster_all_nuclides	file:
 i_nuclide	clustering.F90	/^    integer, intent(in) :: i_nuclide /;"	L	subroutine:apply_clustering_to_all_xs	file:
 i_nuclide	clustering.F90	/^    integer, intent(in) :: i_nuclide /;"	L	subroutine:cluster_one_nuclide	file:
@@ -1707,6 +1722,7 @@ i_nuclide	tally.F90	/^    integer :: i_nuclide /;"	L	subroutine:score_tracklengt
 i_reaction	physics.F90	/^    integer :: i_reaction /;"	L	subroutine:sample_reaction	file:
 i_reaction	physics.F90	/^    integer,        intent(in)    :: i_reaction$/;"	L	subroutine:create_fission_sites	file:
 i_reaction	physics.F90	/^    integer, intent(out) :: i_reaction /;"	L	subroutine:sample_fission	file:
+i_rxn	clustering.F90	/^    integer :: i_rxn /;"	L	subroutine:get_xs_sizes	file:
 i_sab	ace.F90	/^    integer :: i_sab /;"	L	subroutine:read_xs	file:
 i_sab	cross_section.F90	/^    integer :: i_sab /;"	L	subroutine:calculate_xs	file:
 i_sab	cross_section.F90	/^    integer, intent(in) :: i_sab /;"	L	subroutine:calculate_nuclide_xs	file:
@@ -1934,6 +1950,7 @@ j	cross_section.F90	/^    integer :: j /;"	L	subroutine:calculate_xs	file:
 j	eigenvalue.F90	/^    integer    :: j /;"	L	subroutine:synchronize_bank	file:
 j	eigenvalue.F90	/^    integer :: i, j,/;"	L	subroutine:calculate_combined_keff	file:
 j	eigenvalue.F90	/^    integer :: i, j,/;"	L	subroutine:shannon_entropy	file:
+j	energy_grid.F90	/^    integer :: j /;"	L	subroutine:cascading_grid	file:
 j	energy_grid.F90	/^    integer :: j /;"	L	subroutine:grid_pointers	file:
 j	geometry.F90	/^    integer :: j /;"	L	subroutine:neighbor_lists	file:
 j	hdf5_summary.F90	/^    integer           :: i, j$/;"	L	subroutine:hdf5_write_tallies	file:
@@ -2078,6 +2095,7 @@ last_elem	list_header.F90	/^    type(ListElemChar), pointer :: last_elem /;"	k	t
 last_elem	list_header.F90	/^    type(ListElemInt), pointer :: last_elem /;"	k	type:ListInt
 last_elem	list_header.F90	/^    type(ListElemReal), pointer :: last_elem /;"	k	type:ListReal
 last_flag	initialize.F90	/^    integer :: last_flag /;"	L	subroutine:read_command_line	file:
+last_i_nuclide	cross_section.F90	/^  integer :: last_i_nuclide$/;"	v	module:cross_section
 last_index	list_header.F90	/^    integer :: last_index /;"	k	type:ListChar
 last_index	list_header.F90	/^    integer :: last_index /;"	k	type:ListInt
 last_index	list_header.F90	/^    integer :: last_index /;"	k	type:ListReal
@@ -2485,6 +2503,7 @@ n2	geometry.F90	/^    real(8) :: n2 /;"	L	subroutine:cross_surface	file:
 n2	output_interface.F90	/^    integer,           intent(in)            :: n1, n2 /;"	L	subroutine:read_tally_result	file:
 n2	output_interface.F90	/^    integer,           intent(in)           :: n1, n2 /;"	L	subroutine:write_tally_result	file:
 n3	geometry.F90	/^    real(8) :: n3 /;"	L	subroutine:cross_surface	file:
+n_aug_grid	ace_header.F90	/^    integer :: n_aug_grid /;"	k	type:Nuclide
 n_bank	particle_header.F90	/^    integer    :: n_bank /;"	k	type:Particle
 n_batches	cmfd_header.F90	/^    integer, intent(in)            :: n_batches /;"	L	subroutine:allocate_cmfd	file:
 n_bins	input_xml.F90	/^    integer :: n_bins /;"	L	subroutine:read_tallies_xml	file:
@@ -2507,6 +2526,7 @@ n_clust	clustering_kmeans.F90	/^    integer :: n_clust /;"	L	subroutine:kms_upda
 n_clust	clustering_kmeans.F90	/^    integer :: n_clust /;"	L	subroutine:print_kms	file:
 n_clust	clustering_kmeans.F90	/^    integer, intent(in) :: n_clust /;"	L	subroutine:kms_uniform_clust_cen	file:
 n_clust_glob	global.F90	/^  integer :: n_clust_glob /;"	v	module:global
+n_code	clustering.F90	/^    integer(8) :: n_code /;"	L	subroutine:get_xs_sizes	file:
 n_collision	particle_header.F90	/^    integer    :: n_collision /;"	k	type:Particle
 n_cols	input_xml.F90	/^    integer n_cols,/;"	L	subroutine:read_plots_xml	file:
 n_comp	input_xml.F90	/^    integer n_cols, col_id, n_comp,/;"	L	subroutine:read_plots_xml	file:
@@ -2519,6 +2539,7 @@ n_dim	clustering_kmeans.F90	/^    integer :: n_dim /;"	L	subroutine:kms_update_c
 n_dim	clustering_kmeans.F90	/^    integer :: n_dim /;"	L	subroutine:print_kms	file:
 n_dimension	geometry_header.F90	/^     integer :: n_dimension /;"	k	type:Lattice
 n_dimension	mesh_header.F90	/^    integer :: n_dimension /;"	k	type:StructuredMesh
+n_e	clustering.F90	/^    integer(8) :: n_e /;"	L	subroutine:get_xs_sizes	file:
 n_e	cmfd_loss_operator.F90	/^    integer :: n_e /;"	L	subroutine:init_loss_matrix	file:
 n_e_out	ace_header.F90	/^    integer              :: n_e_out$/;"	k	type:DistEnergySab
 n_elastic_e_in	ace_header.F90	/^    integer :: n_elastic_e_in /;"	k	type:SAlphaBeta
@@ -2540,6 +2561,7 @@ n_filters	input_xml.F90	/^    integer :: n_filters /;"	L	subroutine:read_tallies
 n_filters	tally_header.F90	/^    integer                        :: n_filters /;"	k	type:TallyObject
 n_fission	ace_header.F90	/^    integer :: n_fission /;"	k	type:Nuclide
 n_grid	ace_header.F90	/^    integer :: n_grid /;"	k	type:Nuclide
+n_grid	clustering.F90	/^    integer(8) :: n_grid /;"	L	subroutine:get_xs_sizes	file:
 n_grid	global.F90	/^  integer :: n_grid /;"	v	module:global
 n_grid_local	clustering.F90	/^    integer :: n_grid_local /;"	L	function:find_grid_index	file:
 n_grid_new	clustering.F90	/^    integer :: n_grid_old, n_grid_new /;"	L	subroutine:thin_energy_grid	file:
@@ -2600,8 +2622,10 @@ n_therm	clustering.F90	/^    integer :: n_therm /;"	L	subroutine:apply_clusterin
 n_therm	clustering.F90	/^    integer :: n_therm /;"	L	subroutine:thin_energy_grid	file:
 n_therm	clustering.F90	/^    integer, intent(in) :: n_therm /;"	L	subroutine:condense_one_xs	file:
 n_therm	clustering.F90	/^    integer, intent(in) :: n_therm /;"	L	subroutine:reorder_clusters	file:
+n_tot	clustering.F90	/^    integer(8) :: n_tot /;"	L	subroutine:get_xs_sizes	file:
 n_tracks	input_xml.F90	/^    integer :: n_tracks$/;"	L	subroutine:read_settings_xml	file:
 n_tracks	track_output.F90	/^  integer, private                  :: n_tracks /;"	v	module:track_output
+n_ueg	clustering.F90	/^    integer(8) :: n_ueg /;"	L	subroutine:get_xs_sizes	file:
 n_universes	global.F90	/^  integer :: n_universes /;"	v	module:global
 n_user_score_bins	tally_header.F90	/^    integer              :: n_user_score_bins /;"	k	type:TallyObject
 n_values	ace.F90	/^    integer, intent(in) :: n_values /;"	L	function:get_int	file:
@@ -2613,8 +2637,14 @@ n_x	geometry.F90	/^    integer :: n_x,/;"	L	subroutine:find_cell	file:
 n_x	hdf5_summary.F90	/^    integer          :: n_x,/;"	L	subroutine:hdf5_write_geometry	file:
 n_x	initialize.F90	/^    integer :: n_x,/;"	L	subroutine:adjust_indices	file:
 n_x	input_xml.F90	/^    integer :: n_x,/;"	L	subroutine:read_geometry_xml	file:
+n_xs_2nd	clustering.F90	/^    integer(8) :: n_xs_2nd /;"	L	subroutine:get_xs_sizes	file:
+n_xs_main	clustering.F90	/^    integer(8) :: n_xs_main /;"	L	subroutine:get_xs_sizes	file:
 n_xs_new	clustering.F90	/^    integer :: n_xs_old, n_xs_new /;"	L	subroutine:condense_one_xs	file:
 n_xs_old	clustering.F90	/^    integer :: n_xs_old,/;"	L	subroutine:condense_one_xs	file:
+n_xs_other	clustering.F90	/^    integer(8) :: n_xs_other /;"	L	subroutine:get_xs_sizes	file:
+n_xs_rxn	clustering.F90	/^    integer(8) :: n_xs_rxn /;"	L	subroutine:get_xs_sizes	file:
+n_xs_tot	clustering.F90	/^    integer(8) :: n_xs_tot /;"	L	subroutine:get_xs_sizes	file:
+n_xs_urr	clustering.F90	/^    integer(8) :: n_xs_urr /;"	L	subroutine:get_xs_sizes	file:
 n_y	geometry.F90	/^    integer :: n_x, n_y,/;"	L	subroutine:cross_lattice	file:
 n_y	geometry.F90	/^    integer :: n_x, n_y,/;"	L	subroutine:find_cell	file:
 n_y	hdf5_summary.F90	/^    integer          :: n_x, n_y,/;"	L	subroutine:hdf5_write_geometry	file:
@@ -2835,11 +2865,13 @@ nuc	ace.F90	/^    type(Nuclide), pointer :: nuc$/;"	L	subroutine:read_esz	file:
 nuc	ace.F90	/^    type(Nuclide), pointer :: nuc$/;"	L	subroutine:read_nu_data	file:
 nuc	ace.F90	/^    type(Nuclide), pointer :: nuc$/;"	L	subroutine:read_reactions	file:
 nuc	ace.F90	/^    type(Nuclide), pointer :: nuc$/;"	L	subroutine:read_unr_res	file:
-nuc	clustering.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:apply_clustering_to_all_xs	file:
-nuc	clustering.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:cluster_one_nuclide	file:
-nuc	clustering.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:thin_energy_grid	file:
+nuc	clustering.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:get_xs_sizes	file:
 nuc	clustering.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:write_clustering	file:
+nuc	clustering.F90	/^    type(Nuclide), pointer, save :: nuc /;"	L	subroutine:apply_clustering_to_all_xs	file:
+nuc	clustering.F90	/^    type(Nuclide), pointer, save :: nuc /;"	L	subroutine:cluster_one_nuclide	file:
+nuc	clustering.F90	/^    type(Nuclide), pointer, save :: nuc /;"	L	subroutine:thin_energy_grid	file:
 nuc	cross_section.F90	/^    type(Nuclide), pointer, save :: nuc /;"	L	subroutine:calculate_nuclide_xs	file:
+nuc	energy_grid.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:cascading_grid	file:
 nuc	energy_grid.F90	/^    type(Nuclide), pointer :: nuc /;"	L	subroutine:grid_pointers	file:
 nuc	fission.F90	/^    type(Nuclide), pointer :: nuc /;"	L	function:nu_delayed	file:
 nuc	fission.F90	/^    type(Nuclide), pointer :: nuc /;"	L	function:nu_prompt	file:
@@ -2861,6 +2893,7 @@ nuclide_bins	tally_header.F90	/^    integer, allocatable :: nuclide_bins(/;"	k	t
 nuclide_clear	ace_header.F90	/^    subroutine nuclide_clear(/;"	s	module:ace_header
 nuclide_dict	global.F90	/^  type(DictCharInt) :: nuclide_dict$/;"	v	module:global
 nuclides	global.F90	/^  type(Nuclide),    allocatable, target :: nuclides(/;"	v	module:global
+num	clustering.F90	/^    character(len=10) :: num /;"	L	subroutine:get_xs_sizes	file:
 num	string.F90	/^    integer(8) :: num$/;"	L	function:str_to_int	file:
 num	string.F90	/^    integer(8), intent(in) :: num$/;"	L	function:int8_to_str	file:
 num	string.F90	/^    integer, intent(in) :: num$/;"	L	function:int4_to_str	file:
@@ -3310,8 +3343,10 @@ rxn	physics.F90	/^    type(Reaction), pointer :: rxn$/;"	L	subroutine:inelastic_
 s	geometry.F90	/^    logical                       :: s /;"	L	function:sense	file:
 s	geometry.F90	/^    type(Surface), pointer, sa/;"	L	function:simple_cell_contains	file:
 s	output.F90	/^    type(Surface),     pointer :: s /;"	L	subroutine:print_geometry	file:
+s_int	clustering.F90	/^    integer :: s_int /;"	L	subroutine:get_xs_sizes	file:
 s_n	cmfd_power_solver.F90	/^  type(Vector) :: s_n /;"	v	module:cmfd_power_solver
 s_o	cmfd_power_solver.F90	/^  type(Vector) :: s_o /;"	v	module:cmfd_power_solver
+s_real	clustering.F90	/^    integer :: s_real /;"	L	subroutine:get_xs_sizes	file:
 s_tol	cmfd_power_solver.F90	/^    real(8), intent(in), optional :: s_tol /;"	L	subroutine:cmfd_power_execute	file:
 sab	cross_section.F90	/^    type(SAlphaBeta), pointer, save :: sab /;"	L	subroutine:calculate_sab_xs	file:
 sab	output.F90	/^    type(SAlphaBeta), pointer :: sab$/;"	L	subroutine:print_sab_table	file:
@@ -3586,6 +3621,7 @@ temp_array	hdf5_summary.F90	/^    integer, allocatable :: temp_array(/;"	L	subro
 temp_array	state_point.F90	/^    integer, allocatable    :: temp_array(/;"	L	subroutine:load_state_point	file:
 temp_array	state_point.F90	/^    integer, allocatable    :: temp_array(/;"	L	subroutine:write_state_point	file:
 temp_dble	input_xml.F90	/^    real(8) :: temp_dble /;"	L	subroutine:read_materials_xml	file:
+temp_density	ace.F90	/^    real(8) :: temp_density /;"	L	subroutine:read_xs	file:
 temp_int	input_xml.F90	/^    integer :: temp_int$/;"	L	subroutine:read_settings_xml	file:
 temp_int_array	input_xml.F90	/^    integer, allocatable :: temp_int_array(/;"	L	subroutine:read_geometry_xml	file:
 temp_int_array	input_xml.F90	/^    integer, allocatable :: temp_int_array(/;"	L	subroutine:read_settings_xml	file:
@@ -3604,6 +3640,7 @@ temp_ptr	xml_interface.F90	/^    type(Node), pointer :: temp_ptr$/;"	L	subroutin
 temp_ptr	xml_interface.F90	/^    type(Node), pointer :: temp_ptr$/;"	L	subroutine:get_node_value_integer	file:
 temp_ptr	xml_interface.F90	/^    type(Node), pointer :: temp_ptr$/;"	L	subroutine:get_node_value_long	file:
 temp_ptr	xml_interface.F90	/^    type(Node), pointer :: temp_ptr$/;"	L	subroutine:get_node_value_string	file:
+temp_sab	ace.F90	/^    integer :: temp_sab /;"	L	subroutine:read_xs	file:
 temp_sites	eigenvalue.F90	/^    type(Bank), save, allocatable :: &$/;"	L	subroutine:synchronize_bank	file:
 temp_str	cmfd_input.F90	/^    character(MAX_LINE_LEN) :: temp_str /;"	L	subroutine:create_cmfd_tally	file:
 temp_str	cmfd_input.F90	/^    character(MAX_LINE_LEN) :: temp_str$/;"	L	subroutine:read_cmfd_xml	file:

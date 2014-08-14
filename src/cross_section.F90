@@ -14,7 +14,11 @@ module cross_section
   save
 
   integer :: union_grid_index
+  integer :: cascade_index
+  integer :: last_i_nuclide
 !$omp threadprivate(union_grid_index)
+!$omp threadprivate(cascade_index)
+!$omp threadprivate(last_i_nuclide)
 
 contains
 
@@ -51,6 +55,14 @@ contains
 
     ! Find energy index on unionized grid
     if (grid_method == GRID_UNION) call find_energy_index(p % E)
+
+    ! Find energy indices for all nuclides on cascading grid
+    if (grid_method == GRID_CASCADE) then
+
+      ! This lets us know we are on the top level of the cascade
+      cascade_index = 0
+      last_i_nuclide = 0
+    end if
 
     ! Determine if this material has S(a,b) tables
     check_sab = (mat % n_sab > 0)
@@ -145,7 +157,8 @@ contains
     real(8) :: f          ! interp factor on nuclide energy grid
     type(Nuclide), pointer, save :: nuc => null()
     type(RrrData), pointer, save :: rrr => null()
-!$omp threadprivate(nuc, rrr)
+    type(Nuclide), pointer, save :: nuc_next => null()
+!$omp threadprivate(nuc, rrr, nuc_next)
 
     ! Set pointer to nuclide
     nuc => nuclides(i_nuclide)
@@ -171,6 +184,59 @@ contains
         i_grid_e = binary_search(nuc % energy, nuc % n_grid, E)
       end if
 
+    case (GRID_CASCADE)
+
+      ! If we are on the top level of the cascading grid, we have to do a binary
+      ! search to find the first energy
+      if (cascade_index == 0) then
+
+        ! If the particle's energy is outside of the augmented grid, set to first
+        ! or last index. Otherwise do a binary search
+        if (E < nuc % aug_energy(1)) then
+          cascade_index = 1
+          i_grid_e = 1
+        elseif (E > nuc % aug_energy(nuc % n_aug_grid)) then
+          cascade_index = nuc % n_aug_grid
+          i_grid_e = nuc % n_grid - 1
+        else
+          cascade_index = binary_search(nuc % aug_energy, nuc % n_aug_grid, E) + 1
+          i_grid_e = nuc % aug_pointers(1, cascade_index) - 1
+
+        ! update cascade_index to be the approximate index of the particle's energy
+        ! in the next nuclide
+        cascade_index = nuc % aug_pointers(2, cascade_index)
+        last_i_nuclide = i_nuclide
+        end if
+
+      ! If we are not on the first nuclide follow the pointer to the energy's
+      ! index in the next augmented grid
+      else
+
+        ! Continue following the pointers to the next augmented grid until we 
+        ! reach the nuclide we are looking for
+        do while (last_i_nuclide < i_nuclide)
+          last_i_nuclide = last_i_nuclide + 1
+
+          ! We will update this nuclide as we cascade down the energy grid
+          nuc_next => nuclides(last_i_nuclide)
+          ! If the energy is outside the grid, set index to last
+          if (cascade_index > nuc_next % n_aug_grid) then
+            i_grid_e = nuc_next % n_grid - 1
+          elseif (cascade_index == 1) then
+            i_grid_e = 1
+
+          ! j is the approximate index of the particle's energy; find it's true
+          ! index by making one comparison to the energy at next index
+          elseif (E < nuc_next % aug_energy(cascade_index - 1)) then
+            cascade_index = cascade_index - 1
+            i_grid_e = nuc_next % aug_pointers(1, cascade_index) - 1
+            cascade_index = nuc_next % aug_pointers(2, cascade_index)
+          else
+            i_grid_e = nuc_next % aug_pointers(1, cascade_index) - 1
+            cascade_index = nuc_next % aug_pointers(2, cascade_index)
+          end if
+        end do
+      end if
     end select
 
     ! check for rare case where two energy points are the same

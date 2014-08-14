@@ -618,13 +618,20 @@ contains
         end do
       end if
 
-      ! Grid index
+      ! Grid index (include fractional cascading)
       if (allocated(nuc % grid_index)) then
         n_grid = n_grid + s_int * size(nuc % grid_index)
       end if
+      if (allocated(nuc % aug_pointers)) then
+        n_grid = n_grid + s_int * size(nuc % aug_pointers, 1) * &
+          size(nuc % aug_pointers, 2)
+      end if
 
-      ! Nuclide energy grid
+      ! Nuclide energy grid (include fractional cascading)
       n_e = n_e + s_real * size(nuc % energy)
+      if (allocated(nuc % aug_energy)) then
+        n_e = n_e + s_real * size(nuc % aug_energy)
+      end if
 
       ! Codebook
       if (nuc % rrr_cluster) then

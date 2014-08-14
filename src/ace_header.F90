@@ -122,6 +122,9 @@ module ace_header
     integer :: n_grid                     ! # of nuclide grid points
     integer, allocatable :: grid_index(:) ! pointers to union grid
     real(8), allocatable :: energy(:)     ! energy values corresponding to xs
+    integer :: n_aug_grid                     ! # of augmented nuclide grid points
+    integer, allocatable :: aug_pointers(:,:) ! pointers to the nuclide and augmented grids
+    real(8), allocatable :: aug_energy(:)     ! augmented energy values for cascading grid
 
     ! Microscopic cross sections
     real(8), allocatable :: total(:)      ! total cross section

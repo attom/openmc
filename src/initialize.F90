@@ -5,7 +5,7 @@ module initialize
   use clustering,       only: cluster_all_nuclides, get_xs_sizes
   use constants
   use dict_header,      only: DictIntInt, ElemKeyValueII
-  use energy_grid,      only: unionized_grid
+  use energy_grid,      only: unionized_grid, cascading_grid
   use error,            only: fatal_error, warning
   !use finalize,         only: finalize_run ! delete!
   use geometry,         only: neighbor_lists
@@ -119,6 +119,13 @@ contains
       if (grid_method == GRID_UNION) then
         call time_unionize % start()
         call unionized_grid()
+        call time_unionize % stop()
+      end if
+
+      ! Construct fractional cascading energy grid
+      if (grid_method == GRID_CASCADE) then
+        call time_unionize % start()
+        call cascading_grid()
         call time_unionize % stop()
       end if
 
