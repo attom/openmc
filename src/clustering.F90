@@ -54,8 +54,7 @@ contains
     nuc => nuclides(i_nuclide)
     ! Do not cluster light elements for now
     if (nuc % zaid <= 11000) return
-    !
-    write (*,*) "Clustering nuclide ", nuc % name
+
     !write (*,*) "Using ", n_clust_glob, &
     !  " clusters and ", n_group_glob, " groups."
 
@@ -94,12 +93,9 @@ contains
     end if
     rrr % e_low = nuc % energy(rrr % i_low)
     rrr % e_high = nuc % energy(rrr % i_high)
-    !
+
     !write (*,*) "RRR goes from ", rrr % e_low, " MeV to ", &
     !  rrr % e_high, " MeV."
-    write (*,*) "On the nuclide grid, this is ", &
-      nuc % energy(rrr % i_low), " MeV to ", &
-      nuc % energy(rrr % i_high), " MeV."
     !write (*,*) "(indices ", rrr % i_low, " - ", &
     !  rrr % i_high, ")"
 
@@ -118,8 +114,14 @@ contains
     !
     !write (*,*) minval(observations), maxval(observations)
 
-    ! Perform k-means clustering
+    ! Determine the number of clusters
     rrr % n_clust = n_clust_glob
+    if (rrr % n_clust >= n_rrr) then
+        nuc % rrr_cluster = .false.
+        return
+    end if
+
+    ! Perform k-means clustering
     call kms_uniform_clust_cen(observations, rrr % n_clust, clust_cen)
     call perform_kms(observations, clust_max_it, clust_tol, clust_cen, &
       rrr % codebook, rrr % L2_err, rrr % Linf_err, err_flag)
@@ -127,11 +129,10 @@ contains
       message = 'K-means failed to produce a valid clustering'
       call fatal_error()
     end if
-    !
+
     !do i = 1,size(clust_cen, 2)
     !  write(*, '(100e9.2)') (10**clust_cen(j, i), j=1,n_rxn)
     !end do
-    write (*,*) "Error is", rrr % L2_err, "/", rrr % Linf_err
 
     ! Write to output files the observations and clusterings
     !call write_clustering(i_nuclide, observations, clust_cen)
@@ -153,10 +154,12 @@ contains
     !  '/', nuc % n_grid
     !end do
 
-    ! Update indices that point to the nuclide's energy grid
-    ! Reactions -> threshold (integer)
-    ! Energy grid (update and thin).
-    ! Energy grid fast offset
+    ! Write brief description
+    write (*,*) "Clustering nuclide ", nuc % name
+    write (*,*) "On the nuclide grid, this is ", &
+      nuc % energy(rrr % i_low), " MeV to ", &
+      nuc % energy(rrr % i_high), " MeV."
+    write (*,*) "Error is", rrr % L2_err, "/", rrr % Linf_err
     write (*,*) '----------------------------------'
 
   end subroutine cluster_one_nuclide
@@ -498,22 +501,24 @@ contains
 !===============================================================================
 
   subroutine get_xs_sizes()
-    integer :: n_xs_tot   ! sum over nuclides of total cross section sizes
-    integer :: n_xs_main  ! sum over nuclides of tot, abs, el, (fis) sizes
-    integer :: n_xs_rxn   ! sum over nuclides of all reactions' sigmas
-    integer :: n_xs_urr   ! size of URR energy grid and probability tables
-    integer :: n_xs_2nd   ! size of secondary distributions for reactions
-    integer :: n_xs_other ! size of other xs uncounted previously
-    integer :: n_grid ! sum of all grid index sizes
-    integer :: n_e    ! sum over nuclides of the local energy grid sizes
-    integer :: n_code ! sum of all codebook sizes
-    integer :: n_ueg  ! union energy grid size
+    integer(8) :: n_xs_tot   ! sum over nuclides of total cross section sizes
+    integer(8) :: n_xs_main  ! sum over nuclides of tot, abs, el, (fis) sizes
+    integer(8) :: n_xs_rxn   ! sum over nuclides of all reactions' sigmas
+    integer(8) :: n_xs_urr   ! size of URR energy grid and probability tables
+    integer(8) :: n_xs_2nd   ! size of secondary distributions for reactions
+    integer(8) :: n_xs_other ! size of other xs uncounted previously
+    integer(8) :: n_grid ! sum of all grid index sizes
+    integer(8) :: n_e    ! sum over nuclides of the local energy grid sizes
+    integer(8) :: n_ueg  ! union energy grid size
+    integer(8) :: n_code ! sum of all codebook sizes
+    integer(8) :: n_tot  ! total size
     integer :: s_real    ! size of real(8) in B
     integer :: s_int     ! size of int in B
     integer :: i_nuclide ! iteration index over nuclides
     integer :: i_rxn     ! iteration index over reactions
     integer :: i_2nd     ! iteration index over secondary energy distribution
     integer :: KB        ! conversion from B to KB
+    integer :: MB        ! conversion from B to MB
     character(len=10) :: num ! temporary storage
     type(Nuclide), pointer :: nuc => null()
     type(Reaction), pointer :: rxn => null()
@@ -535,6 +540,7 @@ contains
     s_real = 8
     s_int = 4
     KB = 1024
+    MB = KB * KB
 
     ! Loop over nuclides and accumulate sizes
     do i_nuclide = 1, n_nuclides_total
@@ -634,6 +640,11 @@ contains
       n_ueg = s_real * size(e_grid)
     end if
 
+    ! Cumulative (overflow issues)
+    n_tot = int(n_xs_main,8) + int(n_xs_rxn,8) + int(n_xs_urr,8) + &
+        int(n_xs_2nd,8) + int(n_xs_other,8) + int(n_grid,8) + int(n_e,8) + &
+        int(n_ueg,8) + int(n_code,8)
+
     ! Convert from B to KB
     n_xs_tot = n_xs_tot / KB
     n_xs_main = n_xs_main / KB
@@ -645,6 +656,7 @@ contains
     n_e = n_e / KB
     n_ueg = n_ueg / KB
     n_code = n_code / KB
+    n_tot = n_tot / MB
 
     ! Print sizes
     write(num, '(i10)') n_xs_tot
@@ -685,6 +697,10 @@ contains
     !
     write(num, '(i10)') n_code
     message = 'Size of all codebooks is          ' // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_tot
+    message = 'Total size is                     ' // num // ' MB'
     call write_message(5)
 
   end subroutine get_xs_sizes
