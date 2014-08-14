@@ -5,6 +5,7 @@ module clustering
   use constants
   use error,             only: fatal_error
   use global
+  use output,            only: write_message
   use search,            only: binary_search
   use string,            only: to_str
 
@@ -490,6 +491,122 @@ contains
     !write (*,'(30i3)') codebook(1:min(size(codebook),400))
 
   end subroutine reorder_clusters
+
+!===============================================================================
+! GET_XS_SIZES determines and prints the current sizes of xs and energy grids.
+! Unallocated arrays will print zero size.
+!===============================================================================
+
+  subroutine get_xs_sizes()
+    integer :: n_xs_tot   ! sum over nuclides of total cross section sizes
+    integer :: n_xs_main  ! sum over nuclides of tot, abs, el, (fis) sizes
+    integer :: n_xs_rxn   ! sum over nuclides of all reactions' sigmas
+    integer :: n_grid ! sum of all grid index sizes
+    integer :: n_e    ! sum over nuclides of the local energy grid sizes
+    integer :: n_code ! sum of all codebook sizes
+    integer :: n_ueg  ! union energy grid size
+    integer :: n_real    ! size of real(8)
+    integer :: n_int     ! size of int
+    integer :: i_nuclide ! iteration index over nuclides
+    integer :: i_rxn     ! iteration index over reactions
+    integer :: KB        ! convertion from B to KB
+    character(len=10) :: num ! temporary storage
+    type(Nuclide), pointer :: nuc => null()
+    type(Reaction), pointer :: rxn => null()
+    type(RrrData), pointer :: rrr => null()
+
+    ! Initialize to zero
+    n_xs_tot = 0
+    n_xs_main = 0
+    n_xs_rxn = 0
+    n_grid = 0
+    n_e = 0
+    n_code = 0
+    n_ueg = 0
+
+    ! Loop over nuclides and accumulate sizes
+    do i_nuclide = 1, n_nuclides_total
+      nuc => nuclides(i_nuclide)
+      !
+      n_xs_tot = n_xs_tot + size(nuc % total)
+      !
+      n_xs_main = n_xs_main + size(nuc % total) + size(nuc % elastic)
+      if (allocated(nuc % absorption)) then
+        n_xs_main = n_xs_main + size(nuc % absorption)
+      else
+        write (*,*) nuc % name
+      end if
+      if (nuc % fissionable) then
+        n_xs_main = n_xs_main + size(nuc % fission) + size(nuc % nu_fission)
+      end if
+      !
+      do i_rxn = 1, nuc % n_reaction
+        rxn => nuc % reactions(i_rxn)
+        if (allocated(rxn % sigma)) then
+          n_xs_rxn = n_xs_rxn + size(rxn % sigma)
+        end if
+      end do
+      !
+      if (allocated(nuc % grid_index)) then
+        n_grid = n_grid + size(nuc % grid_index)
+      end if
+      !
+      n_e = n_e + size(nuc % energy)
+      !
+      if (nuc % rrr_cluster) then
+        rrr => nuc % rrr_data
+        if (allocated(rrr % codebook)) then
+          n_code = n_code + size(rrr % codebook)
+        end if
+      end if
+    end do
+    if (allocated(e_grid)) then
+      n_ueg = size(e_grid)
+    end if
+
+    ! Convert sizes in count to sizes in B
+    n_real = 8
+    n_int = 4
+    kB = 1024
+    !
+    n_xs_tot = n_xs_tot * n_real / KB
+    n_xs_main = n_xs_main * n_real / KB
+    n_xs_rxn = n_xs_rxn * n_real / KB
+    n_grid = n_grid * n_int / KB
+    n_e = n_e * n_real / KB
+    n_ueg = n_ueg * n_real / KB
+    n_code = n_code * n_int / KB
+
+    ! Print sizes
+    write(num, '(i10)') n_xs_tot
+    message = 'Size of all total xs is           ' // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_xs_main
+    message = 'Size of all main xs is            ' // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_xs_rxn
+    message = "Size of all reactions' sigmas is  " // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_grid
+    message = "Size of nuclides' index grids is  " // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_e
+    message = "Size of nuclides' energy grids is " // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_ueg
+    message = 'Size of unionized energy grid is  ' // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_code
+    message = 'Size of all codebooks is          ' // num // ' KB'
+    call write_message(5)
+
+  end subroutine get_xs_sizes
 
 !===============================================================================
 ! WRITE_CLUSTERING writes the observation and cluster centers to file

@@ -2,7 +2,7 @@ module initialize
 
   use ace,              only: read_xs
   use bank_header,      only: Bank
-  use clustering,       only: cluster_all_nuclides
+  use clustering,       only: cluster_all_nuclides, get_xs_sizes
   use constants
   use dict_header,      only: DictIntInt, ElemKeyValueII
   use energy_grid,      only: unionized_grid
@@ -121,6 +121,9 @@ contains
         call unionized_grid()
         call time_unionize % stop()
       end if
+
+      ! Print XS and energy sizes
+      call get_xs_sizes()
 
       ! Allocate and setup tally stride, matching_bins, and tally maps
       call configure_tallies()
