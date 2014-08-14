@@ -210,25 +210,27 @@ contains
     if (check_for_node(doc, "seed")) call get_node_value(doc, "seed", seed)
 
     ! Energy grid methods
-    if (check_for_node(doc, "energy_grid")) then
-      call get_node_value(doc, "energy_grid", temp_str)
-    else
-      temp_str = 'union'
+    if (grid_method == 0) then
+      if (check_for_node(doc, "energy_grid")) then
+        call get_node_value(doc, "energy_grid", temp_str)
+      else
+        temp_str = 'union'
+      end if
+      select case (trim(temp_str))
+      case ('nuclide')
+        grid_method = GRID_NUCLIDE
+      case ('union')
+        grid_method = GRID_UNION
+      case ('lethargy')
+        message = "Lethargy mapped energy grid not yet supported."
+        call fatal_error()
+      case('cascade')
+        grid_method = GRID_CASCADE
+      case default
+        message = "Unknown energy grid method: " // trim(temp_str)
+        call fatal_error()
+      end select
     end if
-    select case (trim(temp_str))
-    case ('nuclide')
-      grid_method = GRID_NUCLIDE
-    case ('union')
-      grid_method = GRID_UNION
-    case ('lethargy')
-      message = "Lethargy mapped energy grid not yet supported."
-      call fatal_error()
-    case('cascade')
-      grid_method = GRID_CASCADE
-    case default
-      message = "Unknown energy grid method: " // trim(temp_str)
-      call fatal_error()
-    end select
 
     ! Verbosity
     if (check_for_node(doc, "verbosity")) then

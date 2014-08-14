@@ -353,6 +353,18 @@ contains
       if (starts_with(argv(i), "-")) then
         select case (argv(i))
 
+        case ('-e','-energy-grid','--energy-grid')
+          ! Read the energy grid method
+          i = i + 1
+          select case(argv(i))
+          case ('NUCLIDE', 'nuclide')
+            grid_method = GRID_NUCLIDE
+          case ('UNION', 'union')
+            grid_method = GRID_UNION
+          case ('CASCADE', 'cascade')
+            grid_method = GRID_CASCADE
+          end select
+
         case ('-c','-cluster', '--cluster')
           clustering_on = .true.
           i = i + 1

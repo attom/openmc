@@ -1,10 +1,6 @@
 <?xml version="1.0"?>
 <settings>
 
-  <energy_grid>
-      cascade
-  </energy_grid>
-
   <!-- Parameters for k-eigenvalue calculation -->
   <eigenvalue>
     <batches>15</batches>

@@ -78,7 +78,7 @@ module global
   type(DictCharInt) :: xs_listing_dict
 
   ! Unionized energy grid
-  integer :: grid_method ! how to treat the energy grid
+  integer :: grid_method = 0 ! how to treat the energy grid
   integer :: n_grid      ! number of points on unionized grid
   real(8), allocatable :: e_grid(:) ! energies on unionized grid
 
