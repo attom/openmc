@@ -501,15 +501,19 @@ contains
     integer :: n_xs_tot   ! sum over nuclides of total cross section sizes
     integer :: n_xs_main  ! sum over nuclides of tot, abs, el, (fis) sizes
     integer :: n_xs_rxn   ! sum over nuclides of all reactions' sigmas
+    integer :: n_xs_urr   ! size of URR energy grid and probability tables
+    integer :: n_xs_2nd   ! size of secondary distributions for reactions
+    integer :: n_xs_other ! size of other xs uncounted previously
     integer :: n_grid ! sum of all grid index sizes
     integer :: n_e    ! sum over nuclides of the local energy grid sizes
     integer :: n_code ! sum of all codebook sizes
     integer :: n_ueg  ! union energy grid size
-    integer :: n_real    ! size of real(8)
-    integer :: n_int     ! size of int
+    integer :: s_real    ! size of real(8) in B
+    integer :: s_int     ! size of int in B
     integer :: i_nuclide ! iteration index over nuclides
     integer :: i_rxn     ! iteration index over reactions
-    integer :: KB        ! convertion from B to KB
+    integer :: i_2nd     ! iteration index over secondary energy distribution
+    integer :: KB        ! conversion from B to KB
     character(len=10) :: num ! temporary storage
     type(Nuclide), pointer :: nuc => null()
     type(Reaction), pointer :: rxn => null()
@@ -519,63 +523,128 @@ contains
     n_xs_tot = 0
     n_xs_main = 0
     n_xs_rxn = 0
+    n_xs_urr = 0
+    n_xs_2nd = 0
+    n_xs_other = 0
     n_grid = 0
     n_e = 0
     n_code = 0
     n_ueg = 0
 
+    ! Conversion sizes
+    s_real = 8
+    s_int = 4
+    KB = 1024
+
     ! Loop over nuclides and accumulate sizes
     do i_nuclide = 1, n_nuclides_total
       nuc => nuclides(i_nuclide)
-      !
-      n_xs_tot = n_xs_tot + size(nuc % total)
-      !
-      n_xs_main = n_xs_main + size(nuc % total) + size(nuc % elastic)
+      ! Total
+      n_xs_tot = n_xs_tot + s_real * size(nuc % total)
+
+      ! Main
+      n_xs_main = n_xs_main + s_real * &
+        (size(nuc % total) + size(nuc % elastic))
       if (allocated(nuc % absorption)) then
-        n_xs_main = n_xs_main + size(nuc % absorption)
-      else
-        write (*,*) nuc % name
+        n_xs_main = n_xs_main + s_real * size(nuc % absorption)
       end if
       if (nuc % fissionable) then
-        n_xs_main = n_xs_main + size(nuc % fission) + size(nuc % nu_fission)
+        n_xs_main = n_xs_main + s_real * &
+          (size(nuc % fission) + size(nuc % nu_fission))
       end if
-      !
+
+      ! Reactions
       do i_rxn = 1, nuc % n_reaction
         rxn => nuc % reactions(i_rxn)
         if (allocated(rxn % sigma)) then
-          n_xs_rxn = n_xs_rxn + size(rxn % sigma)
+          n_xs_rxn = n_xs_rxn + s_real * size(rxn % sigma)
         end if
       end do
-      !
-      if (allocated(nuc % grid_index)) then
-        n_grid = n_grid + size(nuc % grid_index)
+
+      ! Secondary
+      do i_rxn = 1, nuc % n_reaction
+        rxn => nuc % reactions(i_rxn)
+        if (allocated(rxn % adist % energy)) then
+          n_xs_2nd = n_xs_2nd + s_real * size(rxn % adist % energy)
+        end if
+        if (allocated(rxn % adist % type)) then
+          n_xs_2nd = n_xs_2nd + s_int * size(rxn % adist % type)
+        end if
+        if (allocated(rxn % adist % location)) then
+          n_xs_2nd = n_xs_2nd + s_int * size(rxn % adist % location)
+        end if
+        if (allocated(rxn % adist % data)) then
+          n_xs_2nd = n_xs_2nd + s_real * size(rxn % adist % data)
+        end if
+        if (associated(rxn % edist)) then
+          if (allocated(rxn % edist % data)) then
+            n_xs_2nd = n_xs_2nd + s_real * size(rxn % edist % data)
+          end if
+        end if
+      end do
+
+      ! URR
+      if (nuc % urr_present) then
+        n_xs_urr = n_xs_urr + s_real * ( &
+          size(nuc % urr_data % energy) + size(nuc % urr_data % prob, 1) * &
+          size(nuc % urr_data % prob, 2) * size(nuc % urr_data % prob, 3))
       end if
-      !
-      n_e = n_e + size(nuc % energy)
-      !
+
+      ! Other
+      if (nuc % fissionable .and. allocated(nuc % nu_t_data)) then
+        n_xs_other = n_xs_other + s_real * size(nuc % nu_t_data)
+      end if
+      if (nuc % fissionable .and. allocated(nuc % nu_p_data)) then
+        n_xs_other = n_xs_other + s_real * size(nuc % nu_p_data)
+      end if
+      if (nuc % fissionable .and. allocated(nuc % nu_d_data)) then
+        n_xs_other = n_xs_other + s_real * size(nuc % nu_d_data)
+      end if
+      if (nuc % fissionable .and. allocated(nuc % nu_d_precursor_data)) then
+        n_xs_other = n_xs_other + s_real * size(nuc % nu_d_precursor_data)
+      end if
+      if (nuc % fissionable .and. associated(nuc % nu_d_edist)) then
+        do i_2nd = 1, size(nuc % nu_d_edist)
+          if (allocated(nuc % nu_d_edist(i_2nd) % data)) then
+            n_xs_other = n_xs_other + &
+              s_real * size(nuc % nu_d_edist(i_2nd) % data)
+          end if
+        end do
+      end if
+
+      ! Grid index
+      if (allocated(nuc % grid_index)) then
+        n_grid = n_grid + s_int * size(nuc % grid_index)
+      end if
+
+      ! Nuclide energy grid
+      n_e = n_e + s_real * size(nuc % energy)
+
+      ! Codebook
       if (nuc % rrr_cluster) then
         rrr => nuc % rrr_data
         if (allocated(rrr % codebook)) then
-          n_code = n_code + size(rrr % codebook)
+          n_code = n_code + s_int * size(rrr % codebook)
         end if
       end if
     end do
+
+    ! Union energy grid
     if (allocated(e_grid)) then
-      n_ueg = size(e_grid)
+      n_ueg = s_real * size(e_grid)
     end if
 
-    ! Convert sizes in count to sizes in B
-    n_real = 8
-    n_int = 4
-    kB = 1024
-    !
-    n_xs_tot = n_xs_tot * n_real / KB
-    n_xs_main = n_xs_main * n_real / KB
-    n_xs_rxn = n_xs_rxn * n_real / KB
-    n_grid = n_grid * n_int / KB
-    n_e = n_e * n_real / KB
-    n_ueg = n_ueg * n_real / KB
-    n_code = n_code * n_int / KB
+    ! Convert from B to KB
+    n_xs_tot = n_xs_tot / KB
+    n_xs_main = n_xs_main / KB
+    n_xs_rxn = n_xs_rxn  / KB
+    n_xs_urr = n_xs_urr / KB
+    n_xs_2nd = n_xs_2nd / KB
+    n_xs_other = n_xs_other / KB
+    n_grid = n_grid / KB
+    n_e = n_e / KB
+    n_ueg = n_ueg / KB
+    n_code = n_code / KB
 
     ! Print sizes
     write(num, '(i10)') n_xs_tot
@@ -588,6 +657,18 @@ contains
     !
     write(num, '(i10)') n_xs_rxn
     message = "Size of all reactions' sigmas is  " // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_xs_urr
+    message = 'Size of all urr data is           ' // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_xs_2nd
+    message = "Size of all rxns' 2ndary xs is    " // num // ' KB'
+    call write_message(5)
+    !
+    write(num, '(i10)') n_xs_other
+    message = 'Size of other fission data is     ' // num // ' KB'
     call write_message(5)
     !
     write(num, '(i10)') n_grid
